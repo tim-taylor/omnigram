@@ -1,0 +1,139 @@
+import controlP5.*;
+
+class Dial {
+  
+  int m_dim;
+  int m_x;
+  int m_y;
+  int m_min;
+  int m_max;
+  String m_id;
+  Range m_range;
+  PFont m_font;
+  DataField m_datafield;
+  boolean m_dragged;
+  
+  Dial() {
+    setDefaults();
+  }
+  
+  Dial(int x, int y, int d) {
+    setDefaults();
+    m_x = x;
+    m_y = y;
+    m_dim = d; 
+  }
+  
+  Dial(int x, int y, int d, DataField datafield, ControlP5 c) {
+    setDefaults();
+    m_x = x;
+    m_y = y;
+    m_dim = d;
+    m_datafield = datafield;
+    m_id = datafield.m_description; // don't need m_id anymore...
+    m_range = c.addRange(m_id)
+             // disable broadcasting since setRange and setRangeValues will trigger an event
+             .setBroadcast(false) 
+             .setPosition(m_x, m_y)
+             .setSize(m_dim, m_dim/10)
+             .setHandleSize(m_dim/20)
+             .setRange(0,100)
+             .setRangeValues(0,100)
+             .setCaptionLabel("")
+             // after the initialization we turn broadcast back on again
+             .setBroadcast(true)
+             .setColorForeground(color(255,40))
+             .setColorBackground(color(255,40))  
+             ;    
+  }  
+  
+  void setDefaults() {
+    m_x = 50;
+    m_y = 50;
+    m_dim = 200;
+    m_min = 0;
+    m_max = 100;
+    m_font = createFont("Arial",16,true);
+    m_dragged = false;
+  }
+  
+  void setup(ControlP5 c, String id) {
+    m_id = id;
+    m_range = c.addRange(m_id)
+             // disable broadcasting since setRange and setRangeValues will trigger an event
+             .setBroadcast(false) 
+             .setPosition(m_x, m_y)
+             .setSize(m_dim, m_dim/10)
+             .setHandleSize(m_dim/20)
+             .setRange(0,100)
+             .setRangeValues(0,100)
+             .setCaptionLabel("")
+             // after the initialization we turn broadcast back on again
+             .setBroadcast(true)
+             .setColorForeground(color(255,40))
+             .setColorBackground(color(255,40))  
+             ;
+  }
+  
+  void controlEvent(ControlEvent theControlEvent) {
+    if(theControlEvent.isFrom(m_id)) {
+      m_min = int(theControlEvent.getController().getArrayValue(0));
+      m_max = int(theControlEvent.getController().getArrayValue(1));
+    }
+  }
+
+  void draw() {
+    int x = m_x + (m_dim/2);
+    int y = m_y + (m_dim/2) + (1*(m_dim/10));
+    float dmin = ((float)m_min/100.0);
+    float dmax = ((float)m_max/100.0);
+
+    fill(20, 20);
+    rect(m_x, m_y, m_dim, m_dim + (2*(m_dim/10)));
+    
+    stroke(150);
+    noFill();
+    ellipse(x, y, m_dim, m_dim);
+   
+    noStroke();
+    fill(50, 100);
+    arc(x, y, m_dim, m_dim, (dmin * TWO_PI - HALF_PI), (dmax * TWO_PI - HALF_PI), PIE);
+    
+    //arc(x, y, m_dim, m_dim, (-HALF_PI - (dmin * TWO_PI)), (-HALF_PI + ((1.0-dmax) * TWO_PI)), PIE);
+    
+    //arc(x, y, m_dim, m_dim, (dmax * TWO_PI - HALF_PI), (dmin * TWO_PI - HALF_PI), PIE);     
+ 
+    textFont(m_font, 16);
+    fill(255);
+    textAlign(CENTER);
+    text(m_id, x, m_y + m_dim + (1.8*(m_dim/10)));
+  }
+  
+  void mousePressed() {
+    if ((mouseX >= m_x) && 
+        (mouseX < m_x + m_dim) && 
+        (mouseY >= m_y + + (1*(m_dim/10))) &&
+        (mouseY <= m_y + m_dim + (2*(m_dim/10)))) { 
+      m_dragged = true;
+    } else {
+      m_dragged = false;
+    }
+    //println("mp: " + m_dragged);
+  }
+
+  void mouseReleased() {
+    m_dragged = false;
+    //println("mr");
+  }
+  
+  void mouseDragged() {
+    //println("md: " + m_dragged);
+    if (m_dragged) {
+      m_x += (mouseX - pmouseX);
+      m_y += (mouseY - pmouseY);
+      constrain(m_x, 0, width - m_dim);
+      constrain(m_y, 0, height - m_dim);
+      m_range.setPosition(m_x, m_y);
+    }
+  }
+}
