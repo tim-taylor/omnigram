@@ -1,13 +1,14 @@
 class DataField {
   
   String  m_description;
-  char    m_type;           // 'F' float, 'I' int, 'S' string
+  char    m_type;        // 'F' float, 'I' int, 'S' string
   boolean m_bTarget;
   boolean m_bIgnore;
   float   m_fMin;
   float   m_fMax;
   int     m_iMin;
   int     m_iMax;
+  int     m_dataIdx;     // the corresponding column index in Data.m_data 
   
   DataField() {
     setDefaults();
@@ -41,11 +42,16 @@ class DataField {
     m_fMin = 0.0;
     m_fMax = 0.0;
     m_iMin = 0;
-    m_iMax = 0;    
+    m_iMax = 0;
+    m_dataIdx = -1;
   }
   
   boolean isActiveInput() {
     return ((!m_bTarget) && (!m_bIgnore));
+  }
+  
+  boolean isTarget() {
+    return m_bTarget;
   }
   
   boolean isInt() {
@@ -54,6 +60,17 @@ class DataField {
   
   boolean isFloat() {
     return (m_type == 'F');
+  }
+  
+  boolean isString() {
+    return (m_type == 'S');
+  }
+  
+  String toString() {
+    String str;
+    str = m_description + " " + m_type + " " + m_bTarget + " " + m_bIgnore + " f(" + 
+          m_fMin + "," + m_fMax + ") i(" + m_iMin + "," + m_iMax + ") " + m_dataIdx;
+    return str;
   }
 
 }

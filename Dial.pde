@@ -12,6 +12,8 @@ class Dial {
   PFont m_font;
   DataField m_datafield;
   boolean m_dragged;
+  color m_widgetBackgroundColor;
+  color m_dialForegroundColor;
   
   Dial() {
     setDefaults();
@@ -36,7 +38,7 @@ class Dial {
              .setBroadcast(false) 
              .setPosition(m_x, m_y)
              .setSize(m_dim, m_dim/10)
-             .setHandleSize(m_dim/20)
+             .setHandleSize(m_dim/15)
              .setRange(0,100)
              .setRangeValues(0,100)
              .setCaptionLabel("")
@@ -55,24 +57,8 @@ class Dial {
     m_max = 100;
     m_font = createFont("Arial",16,true);
     m_dragged = false;
-  }
-  
-  void setup(ControlP5 c, String id) {
-    m_id = id;
-    m_range = c.addRange(m_id)
-             // disable broadcasting since setRange and setRangeValues will trigger an event
-             .setBroadcast(false) 
-             .setPosition(m_x, m_y)
-             .setSize(m_dim, m_dim/10)
-             .setHandleSize(m_dim/20)
-             .setRange(0,100)
-             .setRangeValues(0,100)
-             .setCaptionLabel("")
-             // after the initialization we turn broadcast back on again
-             .setBroadcast(true)
-             .setColorForeground(color(255,40))
-             .setColorBackground(color(255,40))  
-             ;
+    m_widgetBackgroundColor = 0x20151515; //0x20202020;
+    m_dialForegroundColor   = 0x65404040; //0x50505070;
   }
   
   void controlEvent(ControlEvent theControlEvent) {
@@ -88,7 +74,7 @@ class Dial {
     float dmin = ((float)m_min/100.0);
     float dmax = ((float)m_max/100.0);
 
-    fill(20, 20);
+    fill(m_widgetBackgroundColor);
     rect(m_x, m_y, m_dim, m_dim + (2*(m_dim/10)));
     
     stroke(150);
@@ -96,11 +82,10 @@ class Dial {
     ellipse(x, y, m_dim, m_dim);
    
     noStroke();
-    fill(50, 100);
+    fill(m_dialForegroundColor);
     arc(x, y, m_dim, m_dim, (dmin * TWO_PI - HALF_PI), (dmax * TWO_PI - HALF_PI), PIE);
     
     //arc(x, y, m_dim, m_dim, (-HALF_PI - (dmin * TWO_PI)), (-HALF_PI + ((1.0-dmax) * TWO_PI)), PIE);
-    
     //arc(x, y, m_dim, m_dim, (dmax * TWO_PI - HALF_PI), (dmin * TWO_PI - HALF_PI), PIE);     
  
     textFont(m_font, 16);
@@ -118,16 +103,13 @@ class Dial {
     } else {
       m_dragged = false;
     }
-    //println("mp: " + m_dragged);
   }
 
   void mouseReleased() {
     m_dragged = false;
-    //println("mr");
   }
   
   void mouseDragged() {
-    //println("md: " + m_dragged);
     if (m_dragged) {
       m_x += (mouseX - pmouseX);
       m_y += (mouseY - pmouseY);
