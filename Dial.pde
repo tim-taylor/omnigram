@@ -11,9 +11,12 @@ class Dial {
   Range m_range;
   PFont m_font;
   DataField m_datafield;
-  boolean m_dragged;
+  boolean m_bDragged;
+  boolean m_bHasFocus;
   color m_widgetBackgroundColor;
   color m_dialForegroundColor;
+  ArrayList<InputDial> m_connectedInputDials;
+  ArrayList<OutputDial> m_connectedOutputDials;
   
   Dial() {
     setDefaults();
@@ -56,9 +59,12 @@ class Dial {
     m_min = 0;
     m_max = 100;
     m_font = createFont("Arial",16,true);
-    m_dragged = false;
+    m_bDragged = false;
+    m_bHasFocus = false;
     m_widgetBackgroundColor = 0x20151515; //0x20202020;
     m_dialForegroundColor   = 0x65404040; //0x50505070;
+    m_connectedInputDials = new ArrayList<InputDial>();
+    m_connectedOutputDials = new ArrayList<OutputDial>();
   }
   
   void controlEvent(ControlEvent theControlEvent) {
@@ -74,19 +80,19 @@ class Dial {
     float dmin = ((float)m_min/100.0);
     float dmax = ((float)m_max/100.0);
 
+    if (m_bHasFocus) {
+      strokeWeight(2);
+      stroke(255);
+    } else {
+      noStroke();
+    }
     fill(m_widgetBackgroundColor);
     rect(m_x, m_y, m_dim, m_dim + (2*(m_dim/10)));
     
+    strokeWeight(1);
     stroke(150);
     noFill();
     ellipse(x, y, m_dim, m_dim);
-   
-    noStroke();
-    fill(m_dialForegroundColor);
-    arc(x, y, m_dim, m_dim, (dmin * TWO_PI - HALF_PI), (dmax * TWO_PI - HALF_PI), PIE);
-    
-    //arc(x, y, m_dim, m_dim, (-HALF_PI - (dmin * TWO_PI)), (-HALF_PI + ((1.0-dmax) * TWO_PI)), PIE);
-    //arc(x, y, m_dim, m_dim, (dmax * TWO_PI - HALF_PI), (dmin * TWO_PI - HALF_PI), PIE);     
  
     textFont(m_font, 16);
     fill(255);
@@ -94,23 +100,24 @@ class Dial {
     text(m_id, x, m_y + m_dim + (1.8*(m_dim/10)));
   }
   
-  void mousePressed() {
+  void mousePressed(ArrayList<InputDial> allidials, ArrayList<OutputDial> allodials) {
     if ((mouseX >= m_x) && 
         (mouseX < m_x + m_dim) && 
         (mouseY >= m_y + + (1*(m_dim/10))) &&
         (mouseY <= m_y + m_dim + (2*(m_dim/10)))) { 
-      m_dragged = true;
+      m_bDragged = true;
+      m_bHasFocus = !m_bHasFocus;
     } else {
-      m_dragged = false;
+      m_bDragged = false;
     }
   }
 
   void mouseReleased() {
-    m_dragged = false;
+    m_bDragged = false;
   }
   
   void mouseDragged() {
-    if (m_dragged) {
+    if (m_bDragged) {
       m_x += (mouseX - pmouseX);
       m_y += (mouseY - pmouseY);
       constrain(m_x, 0, width - m_dim);
@@ -118,4 +125,26 @@ class Dial {
       m_range.setPosition(m_x, m_y);
     }
   }
+  
+  boolean hasFocus() {
+    return m_bHasFocus;
+  }
+  
+  boolean isConnectedOutput(OutputDial odial) {
+    for (OutputDial connection : m_connectedOutputDials) {
+      if (connection == odial) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  boolean isConnectedInput(InputDial idial) {
+    for (InputDial connection : m_connectedInputDials) {
+      if (connection == idial) {
+        return true;
+      }
+    }
+    return false;
+  }  
 }

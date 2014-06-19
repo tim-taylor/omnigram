@@ -92,7 +92,7 @@ void updateOutputDials() {
     //println(row.get(id1dIdx) + " " + row.get(od1dIdx));
     if (id1.m_datafield.isInt()) {
       int val = row.get(id1dIdx).intValue();
-      println(id1.m_datafield.m_iMin + " " + val + " " + id1.m_datafield.m_iMax);
+      //println(id1.m_datafield.m_iMin + " " + val + " " + id1.m_datafield.m_iMax);
       float dnorm = 100.0 * ((float)(val - id1.m_datafield.m_iMin) / (float)(id1.m_datafield.m_iMax - id1.m_datafield.m_iMin));
       if (id1.m_min <= dnorm && dnorm <= id1.m_max) {
         c++;
@@ -121,10 +121,10 @@ void controlEvent(ControlEvent theControlEvent) {
 
 void mousePressed() {
   for (Dial dial : idials) {
-    dial.mousePressed();
+    dial.mousePressed(idials, odials);
   }
   for (Dial dial : odials) {
-    dial.mousePressed();
+    dial.mousePressed(idials, odials);
   }  
 }
 
@@ -146,3 +146,32 @@ void mouseDragged() {
   }  
 }
 
+void keyPressed() {
+  if (key == 'c') {
+    connectFocalDials();
+  }
+}
+
+void connectFocalDials() {
+  ArrayList<InputDial> focalinputs = new ArrayList<InputDial>();
+  ArrayList<OutputDial> focaloutputs = new ArrayList<OutputDial>();
+  for (InputDial idial : idials) {
+    if (idial.hasFocus()) {
+      focalinputs.add(idial);
+    }
+  }
+  for (OutputDial odial : odials) {
+    if (odial.hasFocus()) {
+      focaloutputs.add(odial);
+    }
+  }
+  if (focalinputs.size() > 0 && focaloutputs.size() > 0) {
+    focalinputs.get(0).connect(focaloutputs.get(0));
+    //println("We're in business!");
+  }
+  /*
+  else {
+    println("Close, but no cigar!");
+  }
+  */
+}
