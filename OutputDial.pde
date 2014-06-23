@@ -2,7 +2,7 @@ public class OutputDial extends Dial {
   
   OutputDial(int x, int y, int d, DataField datafield, ControlP5 c) {
       super(x,y,d,datafield,c);
-      m_widgetBackgroundColor = 0x8056A5EC;
+      m_widgetBackgroundColor = 0xFF56A5EC; //0x8056A5EC;
   }
   
   void draw() {
@@ -32,10 +32,19 @@ public class OutputDial extends Dial {
     if (!isConnectedInput(idial)) {
       m_connectedInputDials.add(idial);
       idial.connect(this);
-      println("Bingo!");
     }
     else {
-      println("Yawn, already done!");
+      // do nothing
+    }
+  }
+  
+  void disconnect(InputDial idial) {
+    if (!isConnectedInput(idial)) {
+      // do nothing
+    }
+    else {
+      m_connectedInputDials.remove(idial);
+      idial.disconnect(this);
     }
   }  
   

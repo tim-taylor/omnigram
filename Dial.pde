@@ -61,8 +61,8 @@ class Dial {
     m_font = createFont("Arial",16,true);
     m_bDragged = false;
     m_bHasFocus = false;
-    m_widgetBackgroundColor = 0x20151515; //0x20202020;
-    m_dialForegroundColor   = 0x65404040; //0x50505070;
+    m_widgetBackgroundColor = 0xFF151515; //0x20151515;
+    m_dialForegroundColor   = 0x65404040;
     m_connectedInputDials = new ArrayList<InputDial>();
     m_connectedOutputDials = new ArrayList<OutputDial>();
   }
@@ -87,6 +87,8 @@ class Dial {
       noStroke();
     }
     fill(m_widgetBackgroundColor);
+    //fill(20,20,20);
+    //fill(0xFF151515);
     rect(m_x, m_y, m_dim, m_dim + (2*(m_dim/10)));
     
     strokeWeight(1);
@@ -100,7 +102,7 @@ class Dial {
     text(m_id, x, m_y + m_dim + (1.8*(m_dim/10)));
   }
   
-  void mousePressed(ArrayList<InputDial> allidials, ArrayList<OutputDial> allodials) {
+  void mousePressed(ArrayList<InputDial> allidials, ArrayList<OutputDial> allodials, boolean clearFocusIfNotTarget) {
     if ((mouseX >= m_x) && 
         (mouseX < m_x + m_dim) && 
         (mouseY >= m_y + + (1*(m_dim/10))) &&
@@ -109,6 +111,9 @@ class Dial {
       m_bHasFocus = !m_bHasFocus;
     } else {
       m_bDragged = false;
+      if (clearFocusIfNotTarget) {
+        m_bHasFocus = false;
+      }
     }
   }
 
