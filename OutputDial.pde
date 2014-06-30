@@ -1,30 +1,53 @@
 public class OutputDial extends Dial {
+
+  final int m_numBins = 20;  // number of partitions of output dial display
+  int[] m_dataBins;          // records color value for each partition
   
   OutputDial(int x, int y, int d, DataField datafield, ControlP5 c) {
       super(x,y,d,datafield,c);
-      m_widgetBackgroundColor = 0xFF56A5EC; //0x8056A5EC;
+      m_widgetBackgroundColor = 0xFF56A5EC;
+      m_dataBins = new int[m_numBins];
   }
   
   void draw() {
     super.draw();
-    /* 
-    noStroke();
-    fill(m_dialForegroundColor);
-    arc(x, y, m_dim, m_dim, (dmin * TWO_PI - HALF_PI), (dmax * TWO_PI - HALF_PI), PIE);
-    */
+    
+    float ang = -HALF_PI;
+    float arcang = TWO_PI / (float)m_numBins;
+    int x = m_x + (m_dim/2);
+    int y = m_y + (m_dim/2) + (1*(m_dim/10));
+    for (int i=0; i<m_numBins; i++) {
+      noStroke();
+      //fill(m_dataBins[i]);
+      fill(255 - m_dataBins[i]);
+      arc(x,y,m_dim,m_dim,ang,ang+arcang);
+      ang+=arcang;
+    }
+    
+    x = m_x + (int)(1.5 * (float)m_dim);
+    y = m_y + (1*(m_dim/10));
+    int w  = 400;
+    int h = m_dim;
+    rect(x,y,w,h);
+    int bw = w/m_numBins;
+    int bx = x;
+    int mag = 3;
+    fill(100,0,0);
+    for (int i=0; i<m_numBins; i++) {
+      rect(bx, y+h, bw, -(m_dataBins[i]*h*mag/255));
+      bx += bw;
+    }
   }  
   
   void update(int[] bins, int numrows) {
-    int n = bins.length;
-    float ang = -HALF_PI;
-    float arcang = TWO_PI / (float)n;
-    int x = m_x + (m_dim/2);
-    int y = m_y + (m_dim/2) + (1*(m_dim/10));
-    for (int i=0; i<n; i++) {
-      noStroke();
-      fill(255-(int)(255.0*((float)bins[i]/(float)numrows)));
-      arc(x,y,m_dim,m_dim,ang,ang+arcang);
-      ang+=arcang;
+    if (bins.length != m_numBins) {
+      println("Bin length mismatch!");
+      exit();
+    }
+    for (int i=0; i<m_numBins; i++) {
+      //m_dataBins[i] = 255 - (int)(255.0*((float)bins[i]/(float)numrows));
+      m_dataBins[i] = (int)(255.0*((float)bins[i]/(float)numrows));
+      //m_dataBins[i] = bins[i]/numrows;
     }
   }
   

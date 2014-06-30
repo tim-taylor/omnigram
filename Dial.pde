@@ -2,15 +2,16 @@ import controlP5.*;
 
 class Dial {
   
-  int m_dim;
-  int m_x;
-  int m_y;
-  int m_min;
-  int m_max;
-  String m_id;
+  int m_dim;              // dimension of dial (width and height)
+  int m_x;                // x position of dial
+  int m_y;                // y position of dial
+  int m_dialMin;          // min value selectable on dial
+  int m_dialMax;          // max value selectable on dial
+  int m_dialLow;          // current low point selected on dial
+  int m_dialHigh;         // current high point selected on dial
   Range m_range;
   PFont m_font;
-  DataField m_datafield;
+  DataField m_datafield;  // reference to associated data column info
   boolean m_bDragged;
   boolean m_bHasFocus;
   color m_widgetBackgroundColor;
@@ -35,29 +36,66 @@ class Dial {
     m_y = y;
     m_dim = d;
     m_datafield = datafield;
-    m_id = datafield.m_description; // don't need m_id anymore...
-    m_range = c.addRange(m_id)
+
+    m_range = c.addRange(m_datafield.m_description)
              // disable broadcasting since setRange and setRangeValues will trigger an event
              .setBroadcast(false) 
              .setPosition(m_x, m_y)
              .setSize(m_dim, m_dim/10)
              .setHandleSize(m_dim/15)
-             .setRange(0,100)
-             .setRangeValues(0,100)
+             //.setNumberOfTickMarks(8)
+             //.showTickMarks(true)
+             //.snapToTickMarks(true)
+             .setRange(m_dialMin, m_dialMax)          // sets max range on dial
+             .setRangeValues(m_dialLow, m_dialHigh)   // sets current range on dial
              .setCaptionLabel("")
              // after the initialization we turn broadcast back on again
              .setBroadcast(true)
-             .setColorForeground(color(255,40))
-             .setColorBackground(color(255,40))  
+             //.setColorForeground(color(255,40))
+             //.setColorBackground(color(255,40))
+             .setColorForeground(color(255,80))
+             .setColorBackground(color(200,40)) 
              ;    
-  }  
+  }
+  
+  void setRange(float min, float max) {
+    m_dialMin = (int)min;
+    m_dialMax = (int)max;
+    m_dialLow = m_dialMin;
+    m_dialHigh = m_dialMax;
+    m_range.setBroadcast(false);
+    m_range.setRange(m_dialMin, m_dialMax);
+    m_range.setRangeValues(m_dialLow, m_dialHigh);
+    m_range.setBroadcast(true);
+  }
+  
+  void initialiseTicks(int numTicks, boolean snapToTicks) {
+    m_range.setBroadcast(false);
+    m_range.setNumberOfTickMarks(numTicks);
+    m_range.snapToTickMarks(snapToTicks);
+    m_range.showTickMarks(numTicks <= 20);
+    m_range.setDecimalPrecision(0);
+    m_range.setBroadcast(true);
+  }
+  
+  void setRangeAndTicksFromData() {
+    if (m_datafield.isFloat()) {
+      setRange(m_datafield.fMin(), m_datafield.fMax());
+    }
+    else if (m_datafield.isInt()) {
+      setRange(m_datafield.iMin(), m_datafield.iMax());
+      initialiseTicks(m_datafield.iRange(), true);
+    }
+  }
   
   void setDefaults() {
     m_x = 50;
     m_y = 50;
     m_dim = 200;
-    m_min = 0;
-    m_max = 100;
+    m_dialMin = 0;
+    m_dialMax = 100;
+    m_dialLow = 0;
+    m_dialHigh = 100;
     m_font = createFont("Arial",16,true);
     m_bDragged = false;
     m_bHasFocus = false;
@@ -68,17 +106,15 @@ class Dial {
   }
   
   void controlEvent(ControlEvent theControlEvent) {
-    if(theControlEvent.isFrom(m_id)) {
-      m_min = int(theControlEvent.getController().getArrayValue(0));
-      m_max = int(theControlEvent.getController().getArrayValue(1));
+    if(theControlEvent.isFrom(m_datafield.m_description)) {
+      m_dialLow  = int(theControlEvent.getController().getArrayValue(0));
+      m_dialHigh = int(theControlEvent.getController().getArrayValue(1));
     }
   }
 
   void draw() {
     int x = m_x + (m_dim/2);
     int y = m_y + (m_dim/2) + (1*(m_dim/10));
-    float dmin = ((float)m_min/100.0);
-    float dmax = ((float)m_max/100.0);
 
     if (m_bHasFocus) {
       strokeWeight(2);
@@ -87,8 +123,6 @@ class Dial {
       noStroke();
     }
     fill(m_widgetBackgroundColor);
-    //fill(20,20,20);
-    //fill(0xFF151515);
     rect(m_x, m_y, m_dim, m_dim + (2*(m_dim/10)));
     
     strokeWeight(1);
@@ -99,22 +133,33 @@ class Dial {
     textFont(m_font, 16);
     fill(255);
     textAlign(CENTER);
-    text(m_id, x, m_y + m_dim + (1.8*(m_dim/10)));
+    text(m_datafield.m_description, x, m_y + m_dim + (1.8*(m_dim/10)));
   }
   
-  void mousePressed(ArrayList<InputDial> allidials, ArrayList<OutputDial> allodials, boolean clearFocusIfNotTarget) {
+  boolean mousePressed(ArrayList<InputDial> allidials, ArrayList<OutputDial> allodials, boolean clearFocusIfNotTarget) {
+    boolean dialPressed = false;
+    /*
+    int smx = (int)((float)mouseX / displayScale);
+    int smy = (int)((float)mouseY / displayScale);
+    if ((smx >= m_x) && 
+        (smx < m_x + m_dim) && 
+        (smy >= m_y + + (1*(m_dim/10))) &&
+        (smy <= m_y + m_dim + (2*(m_dim/10)))) {
+    */
     if ((mouseX >= m_x) && 
         (mouseX < m_x + m_dim) && 
         (mouseY >= m_y + + (1*(m_dim/10))) &&
-        (mouseY <= m_y + m_dim + (2*(m_dim/10)))) { 
+        (mouseY <= m_y + m_dim + (2*(m_dim/10)))) {    
       m_bDragged = true;
       m_bHasFocus = !m_bHasFocus;
+      dialPressed = true;
     } else {
       m_bDragged = false;
       if (clearFocusIfNotTarget) {
         m_bHasFocus = false;
       }
     }
+    return dialPressed;
   }
 
   void mouseReleased() {

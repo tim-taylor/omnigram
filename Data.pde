@@ -42,7 +42,6 @@ class Data {
           boolean dataAdded = false;
           
           if (m_fields[j].isInt()) {
-            //row.add(Integer.valueOf(data[j]));
             Integer val = Integer.valueOf(data[j]);
             row.add(val);
             dataAdded = true;
@@ -54,7 +53,6 @@ class Data {
             }
           }
           else if (m_fields[j].isFloat()) {
-            //row.add(Float.valueOf(data[j]));
             Float val = Float.valueOf(data[j]);
             row.add(val);
             dataAdded = true;
@@ -78,7 +76,6 @@ class Data {
         m_data.add(row);
       }
     }
-    //println("hello! " + m_data.get(0).get(0));
   }
   
   /*

@@ -12,6 +12,8 @@
 import controlP5.*;
 
 color windowBackgroundColor = 0xFF909090;
+//float displayScale = 1.2;
+int dialSize = 160;
 
 ControlP5 cp5;
 Data data;
@@ -19,7 +21,8 @@ ArrayList<InputDial> idials;  // Dials for inputs
 ArrayList<OutputDial> odials; // Dials for outputs
 
 void setup() {
-  size(1250,750);
+  //size(1250,750);
+  size((displayWidth*90)/100, (displayHeight*90)/100);
   smooth();
   noStroke();
   
@@ -42,38 +45,43 @@ void setup() {
     new DataField("car name", 'S', false, true)
   };
   
+  
+  data = new Data(datafields);
+  data.load("auto-mpg.data");
+  
+  data.normalise();
+
   idials = new ArrayList<InputDial>();
   odials = new ArrayList<OutputDial>();
   
   int inputs=0, outputs=0;
   for (int i=0; i<datafields.length; i++) {
     if (datafields[i].isActiveInput()) {
-      InputDial dial = new InputDial(20+inputs*175, 250, 140, datafields[i], cp5);
+      InputDial dial = new InputDial(20+inputs*175, 250, dialSize, datafields[i], cp5);
+      dial.setRangeAndTicksFromData();
       idials.add(dial);
       inputs++;
     }
     else if (datafields[i].isTarget()) {
-      OutputDial dial = new OutputDial(100+outputs*175, 50, 140, datafields[i], cp5);
+      OutputDial dial = new OutputDial(100+outputs*175, 50, dialSize, datafields[i], cp5);
       odials.add(dial);
       outputs++;
     }
   }
-  
-  data = new Data(datafields);
-  data.load("auto-mpg.data");
-  
-  data.normalise();
 }
 
 void draw() {
+  //scale(displayScale);
   background(windowBackgroundColor);
   for (Dial dial : idials) {
     dial.draw();
   }
+  updateOutputDials();
   for (Dial dial : odials) {
     dial.draw();
   }
-  updateOutputDials();
+  //updateOutputDials();
+  //rect(10,10,50,50);
 }
 
 void updateOutputDials() {
@@ -105,16 +113,17 @@ void updateOutputDials() {
       
       if (cidial.m_datafield.isInt()) {
         int val = row.get(idIdx).intValue();
-        //println(id1.m_datafield.m_iMin + " " + val + " " + id1.m_datafield.m_iMax);
-        float dnorm = 100.0 * ((float)(val - cidial.m_datafield.m_iMin) / (float)(cidial.m_datafield.m_iMax - cidial.m_datafield.m_iMin));
-        if (cidial.m_min <= dnorm && dnorm <= cidial.m_max) {
+        //float dnorm = 100.0 * ((float)(val - cidial.m_datafield.iMin()) / (float)(cidial.m_datafield.iRange()));
+        if (cidial.m_dialLow <= val && val <= cidial.m_dialHigh) {
+        //if (cidial.m_dialLow <= dnorm && dnorm <= cidial.m_dialHigh) {
           inRange = true;
         }
       }
       else if (cidial.m_datafield.isFloat()) {
         float val = row.get(idIdx).floatValue();
-        float dnorm = 100.0 * ((float)(val - cidial.m_datafield.m_fMin) / (float)(cidial.m_datafield.m_fMax - cidial.m_datafield.m_fMin));
-        if (cidial.m_min <= dnorm && dnorm <= cidial.m_max) {
+        //float dnorm = 100.0 * (val - cidial.m_datafield.fMin()) / cidial.m_datafield.fRange();
+        if (cidial.m_dialLow <= val && val <= cidial.m_dialHigh) {
+        //if (cidial.m_dialLow <= dnorm && dnorm <= cidial.m_dialHigh) {
           inRange = true;
         }        
       }
@@ -152,12 +161,17 @@ void controlEvent(ControlEvent theControlEvent) {
 }
 
 void mousePressed() {
-  for (Dial dial : idials) {
-    dial.mousePressed(idials, odials, true);
-  }
+  boolean outputDialPressed = false;
   for (Dial dial : odials) {
-    dial.mousePressed(idials, odials, false);
+    boolean pressed = dial.mousePressed(idials, odials, false);
+    if (pressed) {
+      outputDialPressed = true;
+    }
   }  
+  for (Dial dial : idials) {
+    dial.mousePressed(idials, odials, !outputDialPressed);
+  }
+  
 }
 
 void mouseReleased() {
