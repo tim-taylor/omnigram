@@ -57,13 +57,15 @@ void setup() {
   int inputs=0, outputs=0;
   for (int i=0; i<datafields.length; i++) {
     if (datafields[i].isActiveInput()) {
-      InputDial dial = new InputDial(20+inputs*175, 250, dialSize, datafields[i], cp5);
+      InputDial dial = new InputDial(20+inputs*200, 170+(80*i), dialSize, data, datafields[i], cp5);
       dial.setRangeAndTicksFromData();
+      if (inputs==0) dial.m_bShowExtra = true;
       idials.add(dial);
       inputs++;
     }
     else if (datafields[i].isTarget()) {
-      OutputDial dial = new OutputDial(100+outputs*175, 50, dialSize, datafields[i], cp5);
+      OutputDial dial = new OutputDial(400+outputs*175, 30, dialSize, data, datafields[i], cp5);
+      dial.setRangeAndTicksFromData();
       odials.add(dial);
       outputs++;
     }

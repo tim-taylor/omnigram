@@ -113,6 +113,10 @@ class Data {
     }
   }
   
+  ArrayList<Number> getRawData(DataField field) {
+    return m_data.get(field.m_dataIdx);
+  }
+  
   
  
 }

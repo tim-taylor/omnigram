@@ -1,10 +1,10 @@
 public class OutputDial extends Dial {
 
   final int m_numBins = 20;  // number of partitions of output dial display
-  int[] m_dataBins;          // records color value for each partition
+  int[] m_dataBins;          // records color value for each partition (each bin entry in range 0-255)
   
-  OutputDial(int x, int y, int d, DataField datafield, ControlP5 c) {
-      super(x,y,d,datafield,c);
+  OutputDial(int x, int y, int d, Data data, DataField datafield, ControlP5 c) {
+      super(x,y,d,data,datafield,c);
       m_widgetBackgroundColor = 0xFF56A5EC;
       m_dataBins = new int[m_numBins];
   }
@@ -18,20 +18,19 @@ public class OutputDial extends Dial {
     int y = m_y + (m_dim/2) + (1*(m_dim/10));
     for (int i=0; i<m_numBins; i++) {
       noStroke();
-      //fill(m_dataBins[i]);
       fill(255 - m_dataBins[i]);
       arc(x,y,m_dim,m_dim,ang,ang+arcang);
       ang+=arcang;
     }
     
-    x = m_x + (int)(1.5 * (float)m_dim);
+    x = m_x + (int)(1.2 * (float)m_dim);
     y = m_y + (1*(m_dim/10));
     int w  = 400;
     int h = m_dim;
     rect(x,y,w,h);
     int bw = w/m_numBins;
     int bx = x;
-    int mag = 3;
+    int mag = 4;
     fill(100,0,0);
     for (int i=0; i<m_numBins; i++) {
       rect(bx, y+h, bw, -(m_dataBins[i]*h*mag/255));
@@ -45,9 +44,7 @@ public class OutputDial extends Dial {
       exit();
     }
     for (int i=0; i<m_numBins; i++) {
-      //m_dataBins[i] = 255 - (int)(255.0*((float)bins[i]/(float)numrows));
       m_dataBins[i] = (int)(255.0*((float)bins[i]/(float)numrows));
-      //m_dataBins[i] = bins[i]/numrows;
     }
   }
   

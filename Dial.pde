@@ -11,6 +11,7 @@ class Dial {
   int m_dialHigh;         // current high point selected on dial
   Range m_range;
   PFont m_font;
+  Data m_data;            // reference to the associated data
   DataField m_datafield;  // reference to associated data column info
   boolean m_bDragged;
   boolean m_bHasFocus;
@@ -18,6 +19,8 @@ class Dial {
   color m_dialForegroundColor;
   ArrayList<InputDial> m_connectedInputDials;
   ArrayList<OutputDial> m_connectedOutputDials;
+  
+  boolean m_bShowExtra;
   
   Dial() {
     setDefaults();
@@ -30,11 +33,12 @@ class Dial {
     m_dim = d; 
   }
   
-  Dial(int x, int y, int d, DataField datafield, ControlP5 c) {
+  Dial(int x, int y, int d, Data data, DataField datafield, ControlP5 c) {
     setDefaults();
     m_x = x;
     m_y = y;
     m_dim = d;
+    m_data = data;
     m_datafield = datafield;
 
     m_range = c.addRange(m_datafield.m_description)
@@ -103,6 +107,7 @@ class Dial {
     m_dialForegroundColor   = 0x65404040;
     m_connectedInputDials = new ArrayList<InputDial>();
     m_connectedOutputDials = new ArrayList<OutputDial>();
+    m_bShowExtra = false;
   }
   
   void controlEvent(ControlEvent theControlEvent) {
