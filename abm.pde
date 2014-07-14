@@ -13,7 +13,7 @@ import controlP5.*;
 
 color windowBackgroundColor = 0xFF909090;
 //float displayScale = 1.2;
-int dialSize = 160;
+int dialSize = 130; //160;
 
 ControlP5 cp5;
 Data data;
@@ -59,7 +59,9 @@ void setup() {
     if (datafields[i].isActiveInput()) {
       InputDial dial = new InputDial(20+inputs*200, 170+(80*i), dialSize, data, datafields[i], cp5);
       dial.setRangeAndTicksFromData();
-      if (inputs==0) dial.m_bShowExtra = true;
+      if (true /*inputs==0*/) {
+        dial.m_bShowExtra = true;
+      }
       idials.add(dial);
       inputs++;
     }

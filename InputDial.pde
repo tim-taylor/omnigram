@@ -27,14 +27,22 @@ public class InputDial extends Dial {
     //println(m_datafield.toString());
     //println(m_dialLow + " " + m_dialHigh + " " + m_dialMin + " " + m_dialMax + " " + dmin + " " + dmax);
     
+    // TEMPORARY PLACEMENT OF THIS CODE
     if (m_bShowExtra) {
+      int numFloatBins = 20; // TODO this should be a member variable
       int[] databins = {};
+      
+      // TODO: should allocate these arrays once when datafield is ready, not at every call to draw()!
       if (m_datafield.isInt()) {
         databins = new int[m_datafield.iRange()];
       }
+      else if (m_datafield.isFloat()) {
+        databins = new int[numFloatBins];
+      }
+      
       x = m_x + (int)(1.2 * (float)m_dim);
       y = m_y + (1*(m_dim/10));
-      int w  = 400;
+      int w  = m_dim * 2;
       int h = m_dim;
       fill(0xFFE0E0E0);
       rect(x,y,w,h);
@@ -55,6 +63,11 @@ public class InputDial extends Dial {
         }
         else if (m_datafield.isFloat()) {
           dx = (int)((float)w*((datum.floatValue()-m_datafield.fMin())/(m_datafield.fRange())));
+          float val = datum.floatValue();
+          if ((float)m_dialLow <= val && val <= (float)m_dialHigh) {
+            int idx = (int)(((val-m_datafield.fMin())*(float)numFloatBins)/m_datafield.fRange());
+            databins[constrain(idx,0,numFloatBins-1)]++; // TODO check these calcs - shouldn't need to use constrain
+          }          
         }
         int dy = (int)((float)(h/2) + random(-h/4,h/4));
         if (showPoint) {
@@ -70,6 +83,16 @@ public class InputDial extends Dial {
           rect(bx, y+h, bw, -(databins[i]*h*mag/255));
           bx += bw;
         }
+      }
+      else if (m_datafield.isFloat()) {
+        int bw = w/numFloatBins;
+        int bx = x;
+        int mag = 1;
+        fill(100,0,0);
+        for (int i=0; i<numFloatBins; i++) {
+          rect(bx, y+h, bw, -(databins[i]*h*mag/255));
+          bx += bw;
+        }        
       }
     }
   }

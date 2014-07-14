@@ -5,7 +5,7 @@ class Dial {
   int m_dim;              // dimension of dial (width and height)
   int m_x;                // x position of dial
   int m_y;                // y position of dial
-  int m_dialMin;          // min value selectable on dial
+  int m_dialMin;          // min value selectable on dial  // TODO THESE SHOULD BE FLOATS!
   int m_dialMax;          // max value selectable on dial
   int m_dialLow;          // current low point selected on dial
   int m_dialHigh;         // current high point selected on dial
