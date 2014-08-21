@@ -1,0 +1,14 @@
+[Model]
+model.name = "Auto MPG"
+model.data = "auto-mpg.data"
+model.live = false
+
+[Node]
+node.id = 1
+node.label = "displacement"
+node.datatype = continuous
+node.min = 0.0
+node.max = 100.0
+node.role = root
+# node.parent = 2
+node.filecol = 3

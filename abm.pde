@@ -4,62 +4,49 @@
 * Tim Taylor
 * Monash University
 *
-* version: 0.1
-* date: 16 June 2014
+* version: 0.2
+* date: 21 August 2014
 *
 */
 
-import controlP5.*;
-
 color windowBackgroundColor = 0xFF909090;
-//float displayScale = 1.2;
-int dialSize = 130; //160;
+String modelLoaderFile = "model-loader.txt";
+int globalZoom = 100;
+int nodeZoom = 100;
 
-ControlP5 cp5;
 Data data;
-ArrayList<InputDial> idials;  // Dials for inputs
-ArrayList<OutputDial> odials; // Dials for outputs
+
+ArrayList<Node> rnodes; // Root nodes
+ArrayList<Node> inodes; // Intermediate nodes
+ArrayList<Node> lnodes; // Leaf nodes
+
+ArrayList<Node> allNodes;     // contains ALL nodes (the union of rnodes, inodes and lnodes)
+boolean allNodesSafe = false; // can we use allNodes or do we have to rebuild it?
 
 void setup() {
-  //size(1250,750);
-  size((displayWidth*90)/100, (displayHeight*90)/100);
+  size((displayWidth*80)/100, (displayHeight*80)/100);
+  
+  if (frame != null) {
+    frame.setResizable(true);
+  }  
+
   smooth();
   noStroke();
   
-  /*
-  println("display: " + displayWidth + "x" + displayHeight);
-  println("toolkit: " + java.awt.Toolkit.getDefaultToolkit().getScreenResolution() + " dpi");
-  */
+  rnodes   = new ArrayList<Node>();
+  inodes   = new ArrayList<Node>(); 
+  lnodes   = new ArrayList<Node>(); 
+  allNodes = new ArrayList<Node>();
   
-  cp5 = new ControlP5(this);
-  
-  DataField[] datafields = {
-    new DataField("mpg", 'F', true),
-    new DataField("cylinders", 'I'),
-    new DataField("displacement", 'F'),
-    new DataField("horsepower", 'F'),
-    new DataField("weight", 'F'),
-    new DataField("acceleration", 'F'),
-    new DataField("model year", 'I'),
-    new DataField("origin", 'I'),
-    new DataField("car name", 'S', false, true)
-  };
-  
-  
-  data = new Data(datafields);
-  data.load("auto-mpg.data");
-  
-  data.normalise();
+  data = new Data(modelLoaderFile, rnodes, inodes, lnodes);
 
-  idials = new ArrayList<InputDial>();
-  odials = new ArrayList<OutputDial>();
-  
+  /*
   int inputs=0, outputs=0;
   for (int i=0; i<datafields.length; i++) {
     if (datafields[i].isActiveInput()) {
       InputDial dial = new InputDial(20+inputs*200, 170+(80*i), dialSize, data, datafields[i], cp5);
       dial.setRangeAndTicksFromData();
-      if (true /*inputs==0*/) {
+      if (true /*inputs==0* /) {
         dial.m_bShowExtra = true;
       }
       idials.add(dial);
@@ -72,25 +59,46 @@ void setup() {
       outputs++;
     }
   }
+  */
+}
+
+void checkAllNodesSafe() {
+  if (!allNodesSafe) {
+    allNodes.clear();
+    allNodes.addAll(rnodes);
+    allNodes.addAll(inodes);
+    allNodes.addAll(lnodes);
+    allNodesSafe = true;
+  }
 }
 
 void draw() {
   //scale(displayScale);
   background(windowBackgroundColor);
-  for (Dial dial : idials) {
-    dial.draw();
+  
+  checkAllNodesSafe();
+  for (Node node : allNodes) {
+    node.draw();
   }
+  
+  /*
   updateOutputDials();
   for (Dial dial : odials) {
     dial.draw();
   }
+  */
   //updateOutputDials();
   //rect(10,10,50,50);
 }
 
+/*
 void updateOutputDials() {
   // this method considers all current input dials and constraints between them,
   // and calculates the corresponding state of all output dials
+  
+  if (odials.isEmpty()) {
+    return;
+  }
   
   OutputDial od1 = odials.get(0);  // TODO... just looking at first output for now
   int od1dIdx = od1.m_datafield.m_dataIdx;
@@ -154,7 +162,9 @@ void updateOutputDials() {
   // update output dial with new bins
   od1.update(obins, data.m_data.size());
 }
+*/
 
+/*
 void controlEvent(ControlEvent theControlEvent) {
   for (Dial dial : idials) {
     dial.controlEvent(theControlEvent);
@@ -163,8 +173,16 @@ void controlEvent(ControlEvent theControlEvent) {
     dial.controlEvent(theControlEvent);
   }  
 }
+*/
 
 void mousePressed() {
+  
+  checkAllNodesSafe();
+  for (Node node : allNodes) {
+    node.mousePressed();
+  }
+  
+  /*
   boolean outputDialPressed = false;
   for (Dial dial : odials) {
     boolean pressed = dial.mousePressed(idials, odials, false);
@@ -175,33 +193,33 @@ void mousePressed() {
   for (Dial dial : idials) {
     dial.mousePressed(idials, odials, !outputDialPressed);
   }
+  */
   
 }
 
-void mouseReleased() {
-  for (Dial dial : idials) {
-    dial.mouseReleased();
-  }
-  for (Dial dial : odials) {
-    dial.mouseReleased();
-  }
-}
-
-void mouseDragged() {
-  for (Dial dial : idials) {
-    dial.mouseDragged();
-  }
-  for (Dial dial : odials) {
-    dial.mouseDragged();
+void mouseReleased() {  
+  checkAllNodesSafe();
+  for (Node node : allNodes) {
+    node.mouseReleased();
   }  
 }
 
+void mouseDragged() {
+  checkAllNodesSafe();
+  for (Node node : allNodes) {
+    node.mouseDragged();
+  }  
+}
+
+/*
 void keyPressed() {
   if (key == 'c') {
     connectFocalDials();
   }
 }
+*/
 
+/*
 void connectFocalDials() {
   ArrayList<InputDial> focalinputs = new ArrayList<InputDial>();
   ArrayList<OutputDial> focaloutputs = new ArrayList<OutputDial>();
@@ -230,5 +248,6 @@ void connectFocalDials() {
   else {
     println("Close, but no cigar!");
   }
-  */
+  * /
 }
+*/

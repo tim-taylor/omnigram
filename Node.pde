@@ -1,26 +1,40 @@
-import controlP5.*;
-
-class Dial {
+public abstract class Node {
   
-  int m_dim;              // dimension of dial (width and height)
-  int m_x;                // x position of dial
-  int m_y;                // y position of dial
-  int m_dialMin;          // min value selectable on dial  // TODO THESE SHOULD BE FLOATS!
-  int m_dialMax;          // max value selectable on dial
-  int m_dialLow;          // current low point selected on dial
-  int m_dialHigh;         // current high point selected on dial
-  Range m_range;
+  // Widget appearance and position
+  int m_sNodeW = 100;      // width of Node widget, same for all nodes 
+  int m_sNodeH = 100;      // height of Node widget, same for all nodes 
+  int m_x;                        // x position of top-left corner
+  int m_y;                        // y position of top-left corner
+  color m_widgetBackgroundColor;
   PFont m_font;
+  
+  // Interaction
+  boolean m_bDragged;
+  boolean m_bHasFocus;  
+  
+  // References to data associated with this Node
   Data m_data;            // reference to the associated data
   DataField m_datafield;  // reference to associated data column info
-  boolean m_bDragged;
-  boolean m_bHasFocus;
-  color m_widgetBackgroundColor;
-  color m_dialForegroundColor;
-  ArrayList<InputDial> m_connectedInputDials;
-  ArrayList<OutputDial> m_connectedOutputDials;
   
-  boolean m_bShowExtra;
+  // Links to connected Nodes
+  ArrayList<Node> m_parents;
+  ArrayList<Node> m_children;  
+
+  // Range selector info (in Int and Float subclasses) 
+  //int m_dialMin;          // min value selectable on dial
+  //int m_dialMax;          // max value selectable on dial
+  //int m_dialLow;          // current low point selected on dial
+  //int m_dialHigh;         // current high point selected on dial
+  
+
+  abstract int getFullRange();
+  abstract int getSelectedRange();
+  //abstract float getRange();
+
+  
+  //boolean m_bShowExtra;
+  
+  /*
   
   Dial() {
     setDefaults();
@@ -116,8 +130,10 @@ class Dial {
       m_dialHigh = int(theControlEvent.getController().getArrayValue(1));
     }
   }
+  */
 
   void draw() {
+    /*
     int x = m_x + (m_dim/2);
     int y = m_y + (m_dim/2) + (1*(m_dim/10));
 
@@ -139,9 +155,15 @@ class Dial {
     fill(255);
     textAlign(CENTER);
     text(m_datafield.m_description, x, m_y + m_dim + (1.8*(m_dim/10)));
+    */
   }
   
+  void mousePressed() {
+  }
+  
+  /*
   boolean mousePressed(ArrayList<InputDial> allidials, ArrayList<OutputDial> allodials, boolean clearFocusIfNotTarget) {
+    /*
     boolean dialPressed = false;
     /*
     int smx = (int)((float)mouseX / displayScale);
@@ -150,7 +172,7 @@ class Dial {
         (smx < m_x + m_dim) && 
         (smy >= m_y + + (1*(m_dim/10))) &&
         (smy <= m_y + m_dim + (2*(m_dim/10)))) {
-    */
+    * /
     if ((mouseX >= m_x) && 
         (mouseX < m_x + m_dim) && 
         (mouseY >= m_y + + (1*(m_dim/10))) &&
@@ -165,13 +187,16 @@ class Dial {
       }
     }
     return dialPressed;
+    * /
   }
+  */
 
   void mouseReleased() {
     m_bDragged = false;
   }
   
   void mouseDragged() {
+    /*
     if (m_bDragged) {
       m_x += (mouseX - pmouseX);
       m_y += (mouseY - pmouseY);
@@ -179,8 +204,10 @@ class Dial {
       constrain(m_y, 0, height - m_dim);
       m_range.setPosition(m_x, m_y);
     }
+    */
   }
   
+  /*
   boolean hasFocus() {
     return m_bHasFocus;
   }
@@ -201,5 +228,6 @@ class Dial {
       }
     }
     return false;
-  }  
+  }
+  */
 }

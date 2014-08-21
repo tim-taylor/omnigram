@@ -12,6 +12,10 @@ class Data {
     m_data = new ArrayList<ArrayList<Number>>();
   }
   
+  Data(String configFilename, ArrayList<Node> rnodes, ArrayList<Node> inodes, ArrayList<Node> lnodes) {
+    String[] file = loadStrings(configFileName);
+  }
+  
   void setDefaults() {
     // m_fields = 0;
     m_data = new ArrayList<ArrayList<Number>>();
@@ -116,8 +120,6 @@ class Data {
   ArrayList<Number> getRawData(DataField field) {
     return m_data.get(field.m_dataIdx);
   }
-  
-  
  
 }
 

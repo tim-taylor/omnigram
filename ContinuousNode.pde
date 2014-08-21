@@ -1,4 +1,22 @@
-public class OutputDial extends Dial {
+public class ContinuousNode extends Node {
+  
+  
+  // Range selector info
+  float m_rangeMin;      // min value selectable on dial
+  float m_rangeMax;      // max value selectable on dial
+  float m_rangeLow;      // current low point selected on dial
+  float m_rangeHigh;     // current high point selected on dial
+  
+  int getSelectedRange() {
+    return (int)(m_rangeHigh - m_rangeLow);
+  }
+
+  int getFullRange() {
+    return (int)(m_rangeMax - m_rangeMin);
+  }   
+   
+  
+  /*
 
   final int m_numBins = 20;  // number of partitions of output dial display
   int[] m_dataBins;          // records color value for each partition (each bin entry in range 0-255)
@@ -66,6 +84,8 @@ public class OutputDial extends Dial {
       m_connectedInputDials.remove(idial);
       idial.disconnect(this);
     }
-  }  
+  }
+  */
   
 }
+

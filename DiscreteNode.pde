@@ -1,5 +1,23 @@
-public class InputDial extends Dial {
+public class DiscreteNode extends Node {
   
+  // Range selector info
+  int m_rangeMin;      // min value selectable on dial
+  int m_rangeMax;      // max value selectable on dial
+  int m_rangeLow;      // current low point selected on dial
+  int m_rangeHigh;     // current high point selected on dial  
+  
+  
+  
+  int getSelectedRange() {
+    return m_rangeHigh - m_rangeLow + 1;
+  }
+
+  int getFullRange() {
+    return m_rangeMax - m_rangeMin + 1;
+  } 
+  
+  
+  /*
   InputDial(int x, int y, int d, Data data, DataField datafield, ControlP5 c) {
       super(x,y,d,data,datafield,c);
       m_widgetBackgroundColor = 0xFF00B3B3;
@@ -136,6 +154,7 @@ public class InputDial extends Dial {
     }
     return false;
   }
+  */
   
 }
 
