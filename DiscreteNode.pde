@@ -7,6 +7,10 @@ public class DiscreteNode extends Node {
   int m_rangeHigh;     // current high point selected on dial  
   
   
+  DiscreteNode(int id, String name, int filecol, int min, int max, ArrayList<Integer> parentIDs) {
+    // TO DO...
+  }
+  
   
   int getSelectedRange() {
     return m_rangeHigh - m_rangeLow + 1;

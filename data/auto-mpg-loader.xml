@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+
+<model>
+	
+	<general data="auto-mpg.data" has-labels="true" live="false">
+		<label>Auto MPG</label>
+	</general>
+	
+	<nodes>
+		
+		<node id="1" datatype="continuous" min="68.0" max="455.0" role="root" filecol="3">
+			<label>displacement</label>
+		</node>
+		
+		<node id="2" datatype="discrete" min="1" max="3" role="root" filecol="7">
+			<label>model year</label>
+			<parents>
+				<parent id="1" />
+			</parents>
+		</node>
+		
+		<node id="3" datatype="discrete" min="70" max="82" role="root" filecol="8">
+			<label>origin</label>
+			<parents>
+				<parent id="1" />
+			</parents>
+		</node>	
+		
+		<node id="4" datatype="discrete" min="3" max="8" role="inter" filecol="2">
+			<label>cylinders</label>
+			<parents>
+				<parent id="1" />
+			</parents>
+		</node>	
+		
+		<node id="5" datatype="continuous" min="46.0" max="230.0" role="inter" filecol="4">
+			<label>horsepower</label>
+			<parents>
+				<parent id="1" />
+				<parent id="4" />
+			</parents>
+		</node>	
+		
+		<node id="6" datatype="continuous" min="8.0" max="24.8" role="leaf" filecol="6">
+			<label>acceleration</label>
+			<parents>
+				<parent id="5" />
+			</parents>
+		</node>	
+		
+		<node id="7" datatype="continuous" min="1613.0" max="5140.0" role="leaf" filecol="5">
+			<label>weight</label>
+			<parents>
+				<parent id="4" />
+			</parents>
+		</node>	
+		
+		<node id="8" datatype="continuous" min="9.0" max="46.6" role="leaf" filecol="1">
+			<label>mpg</label>
+			<parents>
+				<parent id="4" />
+			</parents>
+		</node>			
+		
+	</nodes>
+
+</model>

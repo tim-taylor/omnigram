@@ -7,6 +7,13 @@ public class ContinuousNode extends Node {
   float m_rangeLow;      // current low point selected on dial
   float m_rangeHigh;     // current high point selected on dial
   
+ 
+ 
+  ContinuousNode(int id, String name, int filecol, float min, float max, ArrayList<Integer> parentIDs) {
+    // TO DO...
+  }  
+  
+  
   int getSelectedRange() {
     return (int)(m_rangeHigh - m_rangeLow);
   }

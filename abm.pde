@@ -10,7 +10,7 @@
 */
 
 color windowBackgroundColor = 0xFF909090;
-String modelLoaderFile = "model-loader.txt";
+String modelLoaderFile = "auto-mpg-loader.xml";  // N.B. loader doesn't seem to cope with filenames that are symbolic links!
 int globalZoom = 100;
 int nodeZoom = 100;
 
@@ -28,7 +28,7 @@ void setup() {
   
   if (frame != null) {
     frame.setResizable(true);
-  }  
+  }
 
   smooth();
   noStroke();

@@ -12,8 +12,87 @@ class Data {
     m_data = new ArrayList<ArrayList<Number>>();
   }
   
-  Data(String configFilename, ArrayList<Node> rnodes, ArrayList<Node> inodes, ArrayList<Node> lnodes) {
-    String[] file = loadStrings(configFileName);
+  Data(String configXMLfilename, ArrayList<Node> rnodes, ArrayList<Node> inodes, ArrayList<Node> lnodes) {
+  
+    XML xml = loadXML(configXMLfilename);    
+ 
+    XML general = xml.getChild("general");
+    
+    String dataFilename = general.getString("data");
+    boolean hasData = (dataFilename != null);
+
+    String sDataHasLabels = general.getString("has-labels");
+    boolean dataHasLabels = (sDataHasLabels != null) && (sDataHasLabels.equals("true"));
+    
+    String sLiveRun = general.getString("live");
+    boolean liveRun = (sLiveRun != null) && (sLiveRun.equals("true"));
+    
+    XML modelLabel = general.getChild("label");
+    String modelName;
+    if (modelLabel != null) {
+      modelName = modelLabel.getContent();
+    }
+    
+    //println(general.toString());  
+    
+    XML nodelist = xml.getChild("nodes"); 
+    XML[] nodes = nodelist.getChildren("node");
+    
+    for (int i=0; i < nodes.length; i++) {
+      int imin, imax;
+      float fmin, fmax;
+      ArrayList<Integer> parentIDs = new ArrayList<Integer>();
+      Node newnode = null;
+      
+      XML xnode = nodes[i];
+      
+      int id = xnode.getInt("id");
+      int filecol = xnode.getInt("filecol");
+      String role = xnode.getString("role"); // this determines whether node is placed into rnodes, inodes or lnodes
+
+      XML label = xnode.getChild("label");
+      String name = label.getContent();
+
+      XML parentlist = xnode.getChild("parents");
+      if (parentlist != null) {
+        XML[] parents = parentlist.getChildren("parent");
+        for (int j=0; j < parents.length; j++) {
+          int pid = parents[j].getInt("id");
+          parentIDs.add(pid);
+        }
+      }
+      
+      String datatype = xnode.getString("datatype");
+      if (datatype.equals("discrete")) {
+        imin = xnode.getInt("min");
+        imax = xnode.getInt("max");
+        newnode = new DiscreteNode(id,name,filecol,imin,imax,parentIDs);
+      }
+      else if (datatype.equals("continuous")) {
+        fmin = xnode.getFloat("min");
+        fmax = xnode.getFloat("max");
+        newnode = new ContinuousNode(id,name,filecol,fmin,fmax,parentIDs);
+      }
+      else {
+        println("Oops! Found a node of unknown type '" + datatype + "' in file " + configXMLfilename);
+        exit();
+      }
+      
+      if (role.equals("root")) {
+        rnodes.add(newnode);
+      }
+      else if (role.equals("inter")) {
+        inodes.add(newnode);
+      }
+      else if (role.equals("leaf")) {
+        lnodes.add(newnode);
+      }
+      else {
+        println("Oops! Found a node with unknown role '" + role + "' in file " + configXMLfilename);
+        exit();
+      }
+
+    }
   }
   
   void setDefaults() {
