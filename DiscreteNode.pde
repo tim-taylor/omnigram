@@ -8,9 +8,10 @@ public class DiscreteNode extends Node {
   
   
   DiscreteNode(int id, String name, int filecol, int min, int max, ArrayList<Integer> parentIDs) {
-    // TO DO...
+    super(id, name, filecol, parentIDs);
+    m_rangeMin = m_rangeLow = min;
+    m_rangeMax = m_rangeHigh = max;
   }
-  
   
   int getSelectedRange() {
     return m_rangeHigh - m_rangeLow + 1;

@@ -1,8 +1,12 @@
 public abstract class Node {
   
+  // identity
+  int m_id;             // used to refer to this Node when we can't used a reference
+  String m_name;        // human readable name of node
+  
   // Widget appearance and position
-  int m_sNodeW = 100;      // width of Node widget, same for all nodes 
-  int m_sNodeH = 100;      // height of Node widget, same for all nodes 
+  int m_sNodeW = 100;   // width of Node widget, same for all nodes 
+  int m_sNodeH = 100;   // height of Node widget, same for all nodes 
   int m_x;                        // x position of top-left corner
   int m_y;                        // y position of top-left corner
   color m_widgetBackgroundColor;
@@ -13,12 +17,16 @@ public abstract class Node {
   boolean m_bHasFocus;  
   
   // References to data associated with this Node
-  Data m_data;            // reference to the associated data
-  DataField m_datafield;  // reference to associated data column info
+  //Model m_model;            // reference to the associated model spec
+  //DataField m_datafield;    // reference to associated data column info
+  int m_dataCol; // which column of data.. TO DO, need to convert this to a DataField ref
   
   // Links to connected Nodes
-  ArrayList<Node> m_parents;
+  ArrayList<Node> m_parents; // TO DO: these will have to be populated after ALL Nodes have been constructed
   ArrayList<Node> m_children;  
+
+  ArrayList<Integer> m_parentIDs;
+
 
   // Range selector info (in Int and Float subclasses) 
   //int m_dialMin;          // min value selectable on dial
@@ -30,6 +38,13 @@ public abstract class Node {
   abstract int getFullRange();
   abstract int getSelectedRange();
   //abstract float getRange();
+  
+  Node(int id, String name, int filecol, ArrayList<Integer> parentIDs) {
+    m_id = id;
+    m_name = name;
+    m_dataCol = filecol;
+    m_parentIDs = parentIDs;
+  }
 
   
   //boolean m_bShowExtra;

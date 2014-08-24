@@ -14,14 +14,9 @@ String modelLoaderFile = "auto-mpg-loader.xml";  // N.B. loader doesn't seem to 
 int globalZoom = 100;
 int nodeZoom = 100;
 
-Data data;
+Model model;
 
-ArrayList<Node> rnodes; // Root nodes
-ArrayList<Node> inodes; // Intermediate nodes
-ArrayList<Node> lnodes; // Leaf nodes
 
-ArrayList<Node> allNodes;     // contains ALL nodes (the union of rnodes, inodes and lnodes)
-boolean allNodesSafe = false; // can we use allNodes or do we have to rebuild it?
 
 void setup() {
   size((displayWidth*80)/100, (displayHeight*80)/100);
@@ -33,12 +28,14 @@ void setup() {
   smooth();
   noStroke();
   
+  /*
   rnodes   = new ArrayList<Node>();
   inodes   = new ArrayList<Node>(); 
   lnodes   = new ArrayList<Node>(); 
   allNodes = new ArrayList<Node>();
+  */
   
-  data = new Data(modelLoaderFile, rnodes, inodes, lnodes);
+  model = new Model(modelLoaderFile /*, rnodes, inodes, lnodes*/);
 
   /*
   int inputs=0, outputs=0;
@@ -62,25 +59,15 @@ void setup() {
   */
 }
 
-void checkAllNodesSafe() {
-  if (!allNodesSafe) {
-    allNodes.clear();
-    allNodes.addAll(rnodes);
-    allNodes.addAll(inodes);
-    allNodes.addAll(lnodes);
-    allNodesSafe = true;
-  }
-}
+
 
 void draw() {
   //scale(displayScale);
   background(windowBackgroundColor);
   
-  checkAllNodesSafe();
-  for (Node node : allNodes) {
-    node.draw();
-  }
+  model.draw();
   
+ 
   /*
   updateOutputDials();
   for (Dial dial : odials) {
@@ -177,10 +164,7 @@ void controlEvent(ControlEvent theControlEvent) {
 
 void mousePressed() {
   
-  checkAllNodesSafe();
-  for (Node node : allNodes) {
-    node.mousePressed();
-  }
+  model.mousePressed();
   
   /*
   boolean outputDialPressed = false;
@@ -198,17 +182,15 @@ void mousePressed() {
 }
 
 void mouseReleased() {  
-  checkAllNodesSafe();
-  for (Node node : allNodes) {
-    node.mouseReleased();
-  }  
+  
+  model.mouseReleased();
+
 }
 
 void mouseDragged() {
-  checkAllNodesSafe();
-  for (Node node : allNodes) {
-    node.mouseDragged();
-  }  
+  
+  model.mouseDragged();
+
 }
 
 /*

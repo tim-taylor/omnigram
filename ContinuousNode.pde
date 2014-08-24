@@ -10,7 +10,9 @@ public class ContinuousNode extends Node {
  
  
   ContinuousNode(int id, String name, int filecol, float min, float max, ArrayList<Integer> parentIDs) {
-    // TO DO...
+    super(id, name, filecol, parentIDs);
+    m_rangeMin = m_rangeLow = min;
+    m_rangeMax = m_rangeHigh = max;
   }  
   
   
