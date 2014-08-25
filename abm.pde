@@ -10,16 +10,20 @@
 */
 
 color windowBackgroundColor = 0xFF909090;
+PFont mediumFont;
+
 String modelLoaderFile = "auto-mpg-loader.xml";  // N.B. loader doesn't seem to cope with filenames that are symbolic links!
+
 int globalZoom = 100;
 int nodeZoom = 100;
 
 Model model;
 
 
-
 void setup() {
   size((displayWidth*80)/100, (displayHeight*80)/100);
+  
+  mediumFont = createFont("Arial", 16, true); // Arial, 16 point, anti-aliasing on
   
   if (frame != null) {
     frame.setResizable(true);
@@ -28,14 +32,7 @@ void setup() {
   smooth();
   noStroke();
   
-  /*
-  rnodes   = new ArrayList<Node>();
-  inodes   = new ArrayList<Node>(); 
-  lnodes   = new ArrayList<Node>(); 
-  allNodes = new ArrayList<Node>();
-  */
-  
-  model = new Model(modelLoaderFile /*, rnodes, inodes, lnodes*/);
+  model = new Model(modelLoaderFile);
 
   /*
   int inputs=0, outputs=0;
@@ -63,9 +60,10 @@ void setup() {
 
 void draw() {
   //scale(displayScale);
-  background(windowBackgroundColor);
+  //background(windowBackgroundColor);
+  background(0x808080);
   
-  model.draw();
+  model.draw(globalZoom, nodeZoom);
   
  
   /*

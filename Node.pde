@@ -5,45 +5,67 @@ public abstract class Node {
   String m_name;        // human readable name of node
   
   // Widget appearance and position
-  int m_sNodeW = 100;   // width of Node widget, same for all nodes 
-  int m_sNodeH = 100;   // height of Node widget, same for all nodes 
-  int m_x;                        // x position of top-left corner
-  int m_y;                        // y position of top-left corner
-  color m_widgetBackgroundColor;
-  PFont m_font;
+  PFont m_font;  
+  int m_sNodeW = 220;   // width of Node widget, same for all nodes 
+  int m_sNodeH = 200;   // height of Node widget, same for all nodes 
+  int m_x;              // x position of top-left corner
+  int m_y;              // y position of top-left corner
+  
+  protected int m_mbH = 25;  // menu bar height
+  protected int m_hgH;       // histogram height (= m_sNodeH - m_mbH - m_rsH - m_lbH)
+  protected int m_rsH = 25;  // range selector height
+  protected int m_lbH = 25;  // label bar height
+  
+  color m_mbBackgroundColor;
+  color m_hgBackgroundColor;
+  color m_rsBackgroundColor;
+  color m_lbBackgroundColor;
+  color m_lbForegroundColor;
   
   // Interaction
   boolean m_bDragged;
   boolean m_bHasFocus;  
   
   // References to data associated with this Node
-  //Model m_model;            // reference to the associated model spec
-  //DataField m_datafield;    // reference to associated data column info
-  int m_dataCol; // which column of data.. TO DO, need to convert this to a DataField ref
+  Model m_model; // reference to the associated Model
+  int m_dataCol; // which column of data.. (1 based)
+  
+  // Histogram 
+  int m_sMaxBins = 20;
+  int m_hgNumBins;
+  int[] m_hgBins; 
   
   // Links to connected Nodes
   ArrayList<Node> m_parents; // TO DO: these will have to be populated after ALL Nodes have been constructed
   ArrayList<Node> m_children;  
-
   ArrayList<Integer> m_parentIDs;
-
-
-  // Range selector info (in Int and Float subclasses) 
-  //int m_dialMin;          // min value selectable on dial
-  //int m_dialMax;          // max value selectable on dial
-  //int m_dialLow;          // current low point selected on dial
-  //int m_dialHigh;         // current high point selected on dial
   
-
+  // Abstract classes to be specialised in subclasses
   abstract int getFullRange();
   abstract int getSelectedRange();
-  //abstract float getRange();
+  abstract void initialiseHistogram();
+
   
-  Node(int id, String name, int filecol, ArrayList<Integer> parentIDs) {
+  Node(Model model, int id, String name, int filecol, ArrayList<Integer> parentIDs) {
+    m_model = model;
     m_id = id;
     m_name = name;
     m_dataCol = filecol;
     m_parentIDs = parentIDs;
+    m_hgNumBins = 10;
+    m_x = (int)random(0, width - m_sNodeW);
+    m_y = (int)random(0, height - m_sNodeH);
+    m_hgH = m_sNodeH - m_mbH - m_rsH - m_lbH;
+    m_mbBackgroundColor = #E0E0E0;
+    m_hgBackgroundColor = #FFFFFF;
+    m_rsBackgroundColor = #999999;
+    m_lbBackgroundColor = #E0E0E0;
+    m_lbForegroundColor = #101010;    
+  }
+  
+  void setPosition(int x, int y) {
+    m_x = x;
+    m_y = y;
   }
 
   
@@ -147,7 +169,25 @@ public abstract class Node {
   }
   */
 
-  void draw() {
+  void draw(int globalZoom, int nodeZoom) {
+    
+    pushMatrix();
+    
+    //int midX = m_sNodeW/2;
+    //int midY = m_sNodeH/2;
+    
+    scale(((float)globalZoom)/100.0);
+    
+    translate(m_x, m_y);
+    
+    drawMenuBar();
+    drawHistogram();
+    drawRangeSelector();
+    drawLabelBar();
+         
+    popMatrix();
+    
+    
     /*
     int x = m_x + (m_dim/2);
     int y = m_y + (m_dim/2) + (1*(m_dim/10));
@@ -172,6 +212,63 @@ public abstract class Node {
     text(m_datafield.m_description, x, m_y + m_dim + (1.8*(m_dim/10)));
     */
   }
+  
+  void drawMenuBar() {
+    pushMatrix();    
+    //stroke(0);
+    fill(m_mbBackgroundColor);
+    rect(0, 0, m_sNodeW, m_mbH);
+    popMatrix();
+  }
+  
+  void drawHistogram() {
+    pushMatrix();
+    translate(0, m_mbH);
+    //stroke(0);
+    fill(m_hgBackgroundColor);
+    rect(0, 0, m_sNodeW, m_hgH);
+    
+    if (m_hgBins != null) {
+      int x=0;
+      int dx = m_sNodeW / m_hgNumBins;
+      //println(m_name+" "+m_hgNumBins+" "+dx+" "+m_hgBins[0]);
+      for (int i=0; i < m_hgNumBins; i++) {
+        fill(#880000);
+        int h = (int)((float)m_hgBins[i]*0.5);
+        rect(x, m_hgH-h, dx-1, h ); 
+        x += dx;
+      }
+    }
+    
+    popMatrix();
+  }
+  
+  void drawRangeSelector() {
+    pushMatrix();
+    translate(0, m_mbH+m_hgH);
+    //stroke(0);
+    fill(m_rsBackgroundColor);
+    rect(0, 0, m_sNodeW, m_rsH);
+    popMatrix();
+  }
+  
+  void drawLabelBar() {
+    pushMatrix();
+    translate(0, m_mbH+m_hgH+m_rsH);
+    //stroke(0);
+    fill(m_lbBackgroundColor);
+    rect(0, 0, m_sNodeW, m_lbH);
+    
+    textFont(mediumFont, 16);
+    fill(m_lbForegroundColor);
+    //fill(255);
+    textAlign(CENTER);
+    text(m_name, m_sNodeW/2, m_lbH-8);
+    
+    //println(m_lbForegroundColor);
+    
+    popMatrix();
+  }  
   
   void mousePressed() {
   }

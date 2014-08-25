@@ -7,8 +7,8 @@ public class DiscreteNode extends Node {
   int m_rangeHigh;     // current high point selected on dial  
   
   
-  DiscreteNode(int id, String name, int filecol, int min, int max, ArrayList<Integer> parentIDs) {
-    super(id, name, filecol, parentIDs);
+  DiscreteNode(Model model, int id, String name, int filecol, int min, int max, ArrayList<Integer> parentIDs) {
+    super(model, id, name, filecol, parentIDs);
     m_rangeMin = m_rangeLow = min;
     m_rangeMax = m_rangeHigh = max;
   }
@@ -19,7 +19,26 @@ public class DiscreteNode extends Node {
 
   int getFullRange() {
     return m_rangeMax - m_rangeMin + 1;
-  } 
+  }
+  
+  void initialiseHistogram() {
+    int dataRange = getFullRange();
+    m_hgNumBins = (dataRange > m_sMaxBins) ? m_sMaxBins : dataRange;
+    m_hgBins = new int[m_hgNumBins];
+    for (ArrayList<Number> row : m_model.m_data) {
+      Number data = row.get(m_dataCol-1);
+      int idx = getHistogramIndex(data);
+      //println("data="+data+", idx="+idx+", numBins="+m_hgNumBins);
+      m_hgBins[idx]++;
+    }
+  }
+  
+  int getHistogramIndex(Number num) {
+    int iNum = num.intValue();
+    //int range = getFullRange();
+    //println(iNum+" "+range);
+    return (((iNum - m_rangeMin) * m_hgNumBins) / (m_rangeMax - m_rangeMin + 1));
+  }
   
   
   /*

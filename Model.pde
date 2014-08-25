@@ -1,11 +1,13 @@
 class Model {
-  //DataField[] m_fields;
+
   ArrayList<ArrayList<Number>> m_data;
+  ArrayList<String> m_dataLabels;
   
   // general data about the model
   String  m_modelName;
   boolean m_modelHasData;
   boolean m_modelHasDataLabels;
+  int     m_modelDataLabelCol;
   String  m_modelDataFilename;
   boolean m_modelLiveRun;
   
@@ -16,27 +18,14 @@ class Model {
 
   ArrayList<Node> m_allNodes;     // contains ALL nodes (the union of rnodes, inodes and lnodes)
   boolean m_allNodesSafe = false; // can we use allNodes or do we have to rebuild it?
+
   
-  /*
-  Model() {
-    setDefaults();
-  }
+  //////////// METHODS //////////////////
   
-  Model(DataField[] fields) {
-    setDefaults();
-    m_fields = fields;
-    m_data = new ArrayList<ArrayList<Number>>();
-  }
-  */
-  
-  Model(String configXMLfilename /*, ArrayList<Node> rnodes, ArrayList<Node> inodes, ArrayList<Node> lnodes*/) {
+  Model(String configXMLfilename) {
     
-    m_rnodes   = new ArrayList<Node>();
-    m_inodes   = new ArrayList<Node>();
-    m_lnodes   = new ArrayList<Node>();
-    m_allNodes = new ArrayList<Node>();
-    m_allNodesSafe = false;    
-  
+    setDefaults();
+     
     XML xml = loadXML(configXMLfilename);    
  
     XML general = xml.getChild("general");
@@ -47,6 +36,8 @@ class Model {
     String sDataHasLabels = general.getString("has-labels");
     m_modelHasDataLabels = (sDataHasLabels != null) && (sDataHasLabels.equals("true"));
     
+    m_modelDataLabelCol = general.getInt("label-filecol");
+    
     String sLiveRun = general.getString("live");
     m_modelLiveRun = (sLiveRun != null) && (sLiveRun.equals("true"));
     
@@ -55,10 +46,12 @@ class Model {
       m_modelName = modelLabel.getContent();
     }
     
-    //println(general.toString());  
-    
     XML nodelist = xml.getChild("nodes"); 
     XML[] nodes = nodelist.getChildren("node");
+    
+    int rYpos = 20;
+    int iYpos = 20;
+    int lYpos = 20;    
     
     for (int i=0; i < nodes.length; i++) {
       int imin, imax;
@@ -88,47 +81,160 @@ class Model {
       if (datatype.equals("discrete")) {
         imin = xnode.getInt("min");
         imax = xnode.getInt("max");
-        newnode = new DiscreteNode(id,name,filecol,imin,imax,parentIDs);
+        newnode = new DiscreteNode(this,id,name,filecol,imin,imax,parentIDs);
       }
       else if (datatype.equals("continuous")) {
         fmin = xnode.getFloat("min");
         fmax = xnode.getFloat("max");
-        newnode = new ContinuousNode(id,name,filecol,fmin,fmax,parentIDs);
+        newnode = new ContinuousNode(this,id,name,filecol,fmin,fmax,parentIDs);
       }
       else {
         println("Oops! Found a node of unknown type '" + datatype + "' in file " + configXMLfilename);
         exit();
       }
-      
+           
       if (role.equals("root")) {
         m_rnodes.add(newnode);
+        newnode.setPosition(100, rYpos);
+        rYpos += 250;
+        println("Adding new rnode " + newnode.m_name);
       }
       else if (role.equals("inter")) {
         m_inodes.add(newnode);
+        newnode.setPosition(500, iYpos);
+        iYpos += 250;
+        println("Adding new inode " + newnode.m_name);
       }
       else if (role.equals("leaf")) {
         m_lnodes.add(newnode);
+        newnode.setPosition(900, lYpos);
+        lYpos += 250;
+        println("Adding new lnode " + newnode.m_name);
       }
       else {
         println("Oops! Found a node with unknown role '" + role + "' in file " + configXMLfilename);
         exit();
       }
-
     }
     
     // Having read all of the model specification file, load in the data if a
     // data file has been specified
-    
     if (m_modelHasData) {
       load(m_modelDataFilename);
+      checkAllNodesSafe();
+      for (Node node : m_allNodes) {
+        node.initialiseHistogram();
+      }
     }
-    
   }
+  
   
   void setDefaults() {
     // m_fields = 0;
     m_data = new ArrayList<ArrayList<Number>>();
+    m_dataLabels = new ArrayList<String>();
+    m_rnodes   = new ArrayList<Node>();
+    m_inodes   = new ArrayList<Node>();
+    m_lnodes   = new ArrayList<Node>();
+    m_allNodes = new ArrayList<Node>();
+    m_allNodesSafe = false;
+    m_modelDataLabelCol = 0;      
   }
+
+
+  void load(String filename) {
+    String lines[] = loadStrings(filename);
+    
+    checkAllNodesSafe();
+    int numNodes = m_allNodes.size();
+    boolean[] colDiscrete = new boolean[numNodes];
+    for (Node node : m_allNodes) {
+      assert(node.m_dataCol <= numNodes); // TODO: for now, assuming all cols have associated nodes, and cols labeled from 1 up
+      colDiscrete[node.m_dataCol-1] = (node instanceof DiscreteNode);
+    }
+    
+    for (int i = 0 ; i < lines.length; i++) {
+      String[] data = splitTokens(lines[i],",");
+      ArrayList<Number> row = new ArrayList<Number>();
+        
+      for (int j=0; j < data.length /*m_fields.length*/; j++) {
+        boolean dataAdded = false;
+         
+        if (j == m_modelDataLabelCol-1) {
+          m_dataLabels.add(data[j]); // TO DO: we are assuming here that every row has a label, so data and labels remain in sync
+        }
+        else if (colDiscrete[j]) {
+          Integer val = Integer.valueOf(data[j]);
+          row.add(val);
+          dataAdded = true;
+        }
+        else /*if (m_fields[j].isFloat())*/ {
+          Float val = Float.valueOf(data[j]);
+          row.add(val);
+          dataAdded = true;
+        }
+      }
+      m_data.add(row);
+    }
+    
+    /*
+    for (int i=0; i<m_data.size(); i++) {
+      println(m_data.get(i).get(1));
+    }
+    */
+  }
+  
+  
+  ArrayList<Number> getRawData(DataField field) {
+    return m_data.get(field.m_dataIdx);
+  }
+  
+  
+  void checkAllNodesSafe() {
+    if (!m_allNodesSafe) {
+      m_allNodes.clear();
+      m_allNodes.addAll(m_rnodes);
+      m_allNodes.addAll(m_inodes);
+      m_allNodes.addAll(m_lnodes);
+      m_allNodesSafe = true;
+    }
+  }
+  
+  
+  void draw(int globalZoom, int nodeZoom) {
+    //background(0);
+    checkAllNodesSafe();
+    for (Node node : m_allNodes) {
+      node.draw(globalZoom, nodeZoom);
+    }
+  }
+  
+  
+  void mousePressed() {
+    checkAllNodesSafe();
+    for (Node node : m_allNodes) {
+      node.mousePressed();
+    }      
+  }
+ 
+ 
+  void mouseReleased() {
+    checkAllNodesSafe();
+    for (Node node : m_allNodes) {
+      node.mouseReleased();
+    }      
+  }
+  
+  
+  void mouseDragged() {
+    checkAllNodesSafe();
+    for (Node node : m_allNodes) {
+      node.mouseDragged();
+    }     
+  }
+  
+  
+  // OLD STUFF.....
 
   /*
   void insert(Number... data) {
@@ -141,75 +247,14 @@ class Model {
   }
   */
   
-  void load(String filename) {
-    String lines[] = loadStrings(filename);
-    //println("there are " + lines.length + " lines");  
-    
-    checkAllNodesSafe();
-    int numNodes = m_allNodes.size();
-    boolean[] colDiscrete = new boolean[numNodes];
-    for (Node node : m_allNodes) {
-      assert(node.m_dataCol <= numNodes); // TODO: for now, assuming all cols have associated nodes, and cols labeled from 1 up
-      colDiscrete[node.m_dataCol=1] = (node instanceof DiscreteNode);
-    }
-    
-    for (int i = 0 ; i < lines.length; i++) {
-      String[] data = splitTokens(lines[i],",");
-      //println("data: " + lines[i] + " -> " + data.length + " | " + m_fields);
-      //if (data.length >= m_fields.length) {
-        ArrayList<Number> row = new ArrayList<Number>();
-        
-        for (int j=0; j < data.length /*m_fields.length*/; j++) {
-          
-          println(data[j]);
-          
-          boolean dataAdded = false;
-          
-          if (colDiscrete[j]) {
-            Integer val = Integer.valueOf(data[j]);
-            row.add(val);
-            dataAdded = true;
-            /*
-            if (val < m_fields[j].m_iMin) {
-              m_fields[j].m_iMin = val;
-            }
-            if (val > m_fields[j].m_iMax) {
-              m_fields[j].m_iMax = val;
-            }
-            */
-          }
-          else /*if (m_fields[j].isFloat())*/ {
-            Float val = Float.valueOf(data[j]);
-            row.add(val);
-            dataAdded = true;
-            /*
-            if (val < m_fields[j].m_fMin) {
-              m_fields[j].m_fMin = val;
-            }
-            if (val > m_fields[j].m_fMax) {
-              m_fields[j].m_fMax = val;
-            }
-            */
-          }
-          /*
-          else if (m_fields[j].isString()) {
-            // ignore string fields for now
-          }
-          else {
-            println("Warning! Unrecognised field type " + m_fields[j].m_type);
-          }
-          */
-          /*
-          if ((i==0) && dataAdded) { // do this once at start of file
-            m_fields[j].m_dataIdx = row.size()-1; // record column index of newly added data
-          }
-          */
-        }
-        m_data.add(row);
-      //}
+  /*
+  void normalise() {
+    for (int i=0; i<m_fields.length; i++) {
+      println(m_fields[i].toString());
     }
   }
-  
+  */
+    
   /*
   int[] getColMinMax(int col) {
     int[] minmax = new int[2];
@@ -237,57 +282,6 @@ class Model {
     }
     return minmax;
   }
-  */
-  
-  /*
-  void normalise() {
-    for (int i=0; i<m_fields.length; i++) {
-      println(m_fields[i].toString());
-    }
-  }
-  */
-  
-  ArrayList<Number> getRawData(DataField field) {
-    return m_data.get(field.m_dataIdx);
-  }
-  
-  
-  void checkAllNodesSafe() {
-    if (!m_allNodesSafe) {
-      m_allNodes.clear();
-      m_allNodes.addAll(m_rnodes);
-      m_allNodes.addAll(m_inodes);
-      m_allNodes.addAll(m_lnodes);
-      m_allNodesSafe = true;
-    }
-  }
-  
-  void draw() {
-    checkAllNodesSafe();
-    for (Node node : m_allNodes) {
-      node.draw();
-    }
-  }
-  
-  void mousePressed() {
-    checkAllNodesSafe();
-    for (Node node : m_allNodes) {
-      node.mousePressed();
-    }      
-  }
- 
-  void mouseReleased() {
-    checkAllNodesSafe();
-    for (Node node : m_allNodes) {
-      node.mouseReleased();
-    }      
-  }
-  
-  void mouseDragged() {
-    checkAllNodesSafe();
-    for (Node node : m_allNodes) {
-      node.mouseDragged();
-    }     
-  }
+  */  
 }
 

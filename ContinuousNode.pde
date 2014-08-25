@@ -9,8 +9,8 @@ public class ContinuousNode extends Node {
   
  
  
-  ContinuousNode(int id, String name, int filecol, float min, float max, ArrayList<Integer> parentIDs) {
-    super(id, name, filecol, parentIDs);
+  ContinuousNode(Model model, int id, String name, int filecol, float min, float max, ArrayList<Integer> parentIDs) {
+    super(model, id, name, filecol, parentIDs);
     m_rangeMin = m_rangeLow = min;
     m_rangeMax = m_rangeHigh = max;
   }  
@@ -22,7 +22,11 @@ public class ContinuousNode extends Node {
 
   int getFullRange() {
     return (int)(m_rangeMax - m_rangeMin);
-  }   
+  }
+  
+  void initialiseHistogram() {
+    // TO DO...
+  }
    
   
   /*
