@@ -96,19 +96,19 @@ class Model {
       if (role.equals("root")) {
         m_rnodes.add(newnode);
         newnode.setPosition(100, rYpos);
-        rYpos += 250;
+        rYpos += 230;
         println("Adding new rnode " + newnode.m_name);
       }
       else if (role.equals("inter")) {
         m_inodes.add(newnode);
         newnode.setPosition(500, iYpos);
-        iYpos += 250;
+        iYpos += 230;
         println("Adding new inode " + newnode.m_name);
       }
       else if (role.equals("leaf")) {
         m_lnodes.add(newnode);
         newnode.setPosition(900, lYpos);
-        lYpos += 250;
+        lYpos += 230;
         println("Adding new lnode " + newnode.m_name);
       }
       else {

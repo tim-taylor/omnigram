@@ -25,7 +25,33 @@ public class ContinuousNode extends Node {
   }
   
   void initialiseHistogram() {
-    // TO DO...
+    m_hgNumBins = m_sMaxBins;
+    m_hgBins = new int[m_hgNumBins];
+    for (ArrayList<Number> row : m_model.m_data) {
+      Number data = row.get(m_dataCol-1);
+      int idx = getHistogramIndex(data);
+      //println("data="+data+", idx="+idx+", numBins="+m_hgNumBins);
+      if (idx==m_hgNumBins) idx--; // TO DO... a temporary hack...
+      m_hgBins[idx]++;
+    }
+    
+    initialiseHistogramCommon();
+    
+    /*
+    int barx = 0;
+    for (int i=0; i<m_hgNumBins; i++) {
+      HistogramBar bar = new HistogramBar(m_hgBins[i], barx, m_hgH);
+      m_hgBars.add(bar);
+      barx += (bar.numCols() * bar.m_sTileDim) + m_hgMinInterBarGap;
+    }
+    */   
+  }
+  
+  int getHistogramIndex(Number num) {
+    float fNum = num.floatValue();
+    //int range = getFullRange();
+    //println(iNum+" "+range);
+    return (int)(((fNum - m_rangeMin) * m_hgNumBins) / (m_rangeMax - m_rangeMin));
   }
    
   

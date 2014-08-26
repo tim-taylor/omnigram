@@ -31,6 +31,18 @@ public class DiscreteNode extends Node {
       //println("data="+data+", idx="+idx+", numBins="+m_hgNumBins);
       m_hgBins[idx]++;
     }
+    
+    initialiseHistogramCommon();
+    /*
+    int barx = 0;
+    for (int i=0; i<m_hgNumBins; i++) {
+      HistogramBar bar = new HistogramBar(m_hgBins[i], barx, m_hgH);
+      m_hgBars.add(bar);
+      barx += (bar.numCols() * bar.m_sTileDim) + m_hgMinInterBarGap;
+    }
+    
+    m_rsHigh = m_hgNumBins-1;
+    */
   }
   
   int getHistogramIndex(Number num) {
