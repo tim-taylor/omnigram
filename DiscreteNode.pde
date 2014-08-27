@@ -24,32 +24,40 @@ public class DiscreteNode extends Node {
   void initialiseHistogram() {
     int dataRange = getFullRange();
     m_hgNumBins = (dataRange > m_sMaxBins) ? m_sMaxBins : dataRange;
+    
+    /*
     m_hgBins = new int[m_hgNumBins];
+    
+    ArrayList<ArrayList<Integer>> sampleIDs = new ArrayList<ArrayList<Integer>>();
+    for (int i=0; i < m_hgNumBins; i++) {
+      sampleIDs.add(new ArrayList<Integer>());
+    }
+    
+    int rowNum = 0;
     for (ArrayList<Number> row : m_model.m_data) {
       Number data = row.get(m_dataCol-1);
       int idx = getHistogramIndex(data);
-      //println("data="+data+", idx="+idx+", numBins="+m_hgNumBins);
       m_hgBins[idx]++;
+      sampleIDs.get(idx).add(rowNum);
+      rowNum++;
+    }
+    */
+    
+    println("Histogram boundary values for "+m_name);
+    for (int i=0; i<m_hgNumBins; i++) {
+      println(getHistogramBinLowVal(i));
     }
     
     initialiseHistogramCommon();
-    /*
-    int barx = 0;
-    for (int i=0; i<m_hgNumBins; i++) {
-      HistogramBar bar = new HistogramBar(m_hgBins[i], barx, m_hgH);
-      m_hgBars.add(bar);
-      barx += (bar.numCols() * bar.m_sTileDim) + m_hgMinInterBarGap;
-    }
-    
-    m_rsHigh = m_hgNumBins-1;
-    */
   }
   
   int getHistogramIndex(Number num) {
     int iNum = num.intValue();
-    //int range = getFullRange();
-    //println(iNum+" "+range);
     return (((iNum - m_rangeMin) * m_hgNumBins) / (m_rangeMax - m_rangeMin + 1));
+  }
+  
+  Number getHistogramBinLowVal(int bin) {
+    return new Integer((((bin*(m_rangeMax - m_rangeMin + 1))/m_hgNumBins) + m_rangeMin));
   }
   
   

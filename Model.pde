@@ -183,12 +183,7 @@ class Model {
     }
     */
   }
-  
-  
-  ArrayList<Number> getRawData(DataField field) {
-    return m_data.get(field.m_dataIdx);
-  }
-  
+
   
   void checkAllNodesSafe() {
     if (!m_allNodesSafe) {
@@ -197,6 +192,19 @@ class Model {
       m_allNodes.addAll(m_inodes);
       m_allNodes.addAll(m_lnodes);
       m_allNodesSafe = true;
+    }
+  }
+  
+  
+  void setSingleFocus(int nodeIdx) {
+    checkAllNodesSafe();
+    for (Node node : m_allNodes) {
+      if (node.m_id == nodeIdx) {
+        node.m_bHasFocus = true;
+      }
+      else {
+        node.setFullRange();
+      }
     }
   }
   
@@ -281,6 +289,12 @@ class Model {
       minmax[0] = minmax[1];
     }
     return minmax;
+  }
+  */  
+  
+  /*
+  ArrayList<Number> getRawData(DataField field) {
+    return m_data.get(field.m_dataIdx);
   }
   */  
 }
