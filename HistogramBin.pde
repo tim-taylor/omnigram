@@ -11,6 +11,7 @@ class HistogramBin {
   
   color m_tileInRangeSelection = 0xFF880000;
   color m_tileOutsideRangeSelection = 0xFFFFFFFF;
+  color m_tileBrushed = 0xFF000088;
   color m_tileStrokeColor = 0xFF909090;
   
   ArrayList<Integer> m_tilesPerCol;         // records number of tiles in each column
@@ -73,23 +74,45 @@ class HistogramBin {
   void draw() {
     stroke(m_tileStrokeColor);
 
-    
-
     int x = m_x;
     int c = 0;
     for (Integer numTiles : m_tilesPerCol) {
       int y = m_y;
       for (int i=0; i<numTiles; i++) {
         //println(numTiles+", "+i+", "+x+" "+y+", "+m_sTileDim);
-        if (i < m_brushedTilesPerCol.get(c)) {
-          fill(0xFF2222DD);
+        
+        switch (m_node.m_model.m_interactionMode) {
+          case SingleNodeBrushing: {
+            if (m_node.m_bHasFocus) {
+              if (inSelectedRange()) {
+                fill(m_tileInRangeSelection);
+              }
+              else {
+                fill(m_tileOutsideRangeSelection);
+              }
+            }
+            else {
+              if (i < m_brushedTilesPerCol.get(c)) {
+                fill(m_tileBrushed);
+              }
+              else {
+                fill(m_tileOutsideRangeSelection);
+              }
+            }
+            break;
+          }
+          case Unassigned:
+          default: {
+            if (inSelectedRange()) {
+              fill(m_tileInRangeSelection);
+            }
+            else {
+              fill(m_tileOutsideRangeSelection);
+            }
+            break;
+          }
         }
-        else if (inSelectedRange()) {
-          fill(m_tileInRangeSelection);
-        }
-        else {
-          fill(m_tileOutsideRangeSelection);
-        }
+
         rect(x, y-m_sTileDim, m_sTileDim, m_sTileDim);
         y -= m_sTileDim;
       }
@@ -157,7 +180,13 @@ class HistogramBin {
       m_brushedTilesPerCol.set(i, min(nTilesPerCol, tilesLeft));
       tilesLeft -= nTilesPerCol;
     }
-   
+  }
+  
+  
+  void resetBrushing() {
+    for (int i=0; i<m_brushedTilesPerCol.size(); i++) {
+      m_brushedTilesPerCol.set(i, 0);
+    }    
   }
   
 }

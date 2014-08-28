@@ -1,4 +1,4 @@
-class Model {
+public class Model {
 
   ArrayList<ArrayList<Number>> m_data;
   ArrayList<String> m_dataLabels;
@@ -18,7 +18,9 @@ class Model {
 
   ArrayList<Node> m_allNodes;     // contains ALL nodes (the union of rnodes, inodes and lnodes)
   boolean m_allNodesSafe = false; // can we use allNodes or do we have to rebuild it?
-
+  
+  // current mode of interaction
+  InteractionMode m_interactionMode = InteractionMode.Unassigned;
   
   //////////// METHODS //////////////////
   
@@ -203,7 +205,23 @@ class Model {
         node.m_bHasFocus = true;
       }
       else {
+        node.m_bHasFocus = false;
         node.setFullRange();
+      }
+    }
+  }
+  
+  
+  void setInteractionMode(InteractionMode mode) {
+    switch (mode) {
+      case SingleNodeBrushing: {
+        m_interactionMode = InteractionMode.SingleNodeBrushing;
+        resetAllBrushing();
+        break;  
+      }
+      case Unassigned:
+      default: {
+        // TO DO...
       }
     }
   }
@@ -217,7 +235,14 @@ class Model {
         node.brushSamples(selectedSampleIDs);
       }
     }
-  } 
+  }
+  
+  
+  void resetAllBrushing() {
+    for (Node node : m_allNodes) {
+      node.resetBrushing();
+    }    
+  }
   
   
   void draw(int globalZoom, int nodeZoom) {

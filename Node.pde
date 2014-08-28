@@ -154,30 +154,6 @@ public abstract class Node {
     drawLabelBar();
          
     popMatrix();
-    
-    /*
-    int x = m_x + (m_dim/2);
-    int y = m_y + (m_dim/2) + (1*(m_dim/10));
-
-    if (m_bHasFocus) {
-      strokeWeight(2);
-      stroke(255);
-    } else {
-      noStroke();
-    }
-    fill(m_widgetBackgroundColor);
-    rect(m_x, m_y, m_dim, m_dim + (2*(m_dim/10)));
-    
-    strokeWeight(1);
-    stroke(150);
-    noFill();
-    ellipse(x, y, m_dim, m_dim);
- 
-    textFont(m_font, 16);
-    fill(255);
-    textAlign(CENTER);
-    text(m_datafield.m_description, x, m_y + m_dim + (1.8*(m_dim/10)));
-    */
   }
 
   
@@ -255,6 +231,7 @@ public abstract class Node {
       
       if (mouseY >= m_y + m_mbH && mouseY < m_y + m_mbH + m_hgH) {
         ///////////// MOUSE IS IN THE HISTOGRAM AREA ///////////////////////////////////////////////
+        m_model.setInteractionMode(InteractionMode.SingleNodeBrushing);
         m_model.setSingleFocus(m_id);
       }
       else if (mouseY >= m_y + m_mbH + m_hgH && mouseY <= m_y + m_mbH + m_hgH + m_rsH) {
@@ -436,6 +413,13 @@ public abstract class Node {
   }
   
   
+  void resetBrushing() {
+    for (HistogramBin bin : m_hgBins) {
+      bin.resetBrushing();
+    }
+  }
+
+
   //////////// LEGACY STUFF //////////////////////////////
   
   //boolean m_bShowExtra;
