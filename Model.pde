@@ -209,8 +209,18 @@ class Model {
   }
   
   
+  void brushAllNodesOnOneSelection(Node focalNode) {
+    // first gather a list of selected samples
+    ArrayList<Integer> selectedSampleIDs = focalNode.getSelectedSampleIDs();
+    for (Node node : m_allNodes) {
+      if (node != focalNode) {
+        node.brushSamples(selectedSampleIDs);
+      }
+    }
+  } 
+  
+  
   void draw(int globalZoom, int nodeZoom) {
-    //background(0);
     checkAllNodesSafe();
     for (Node node : m_allNodes) {
       node.draw(globalZoom, nodeZoom);

@@ -1,7 +1,7 @@
 public abstract class Node {
   
   // identity
-  int m_id;             // used to refer to this Node when we can't used a reference
+  int m_id;             // used to refer to this Node when we can't use a reference
   String m_name;        // human readable name of node
   
   // Widget appearance and position
@@ -313,6 +313,9 @@ public abstract class Node {
   
   void mouseDragged() {
     
+    int rsLowOld = m_rsLow;
+    int rsHighOld = m_rsHigh;
+    
     if (m_bNodeDragged) {
       ///////////// WHOLE NODE DRAGGED /////////////////////////////////////////////////
       m_x += (mouseX - pmouseX);
@@ -409,6 +412,26 @@ public abstract class Node {
           }
         }         
       }
+    }
+    
+    if (m_rsLow != rsLowOld || m_rsHigh != rsHighOld) {
+      m_model.brushAllNodesOnOneSelection(this);
+    }
+  }
+  
+  
+  ArrayList<Integer> getSelectedSampleIDs() {
+    ArrayList<Integer> list = new ArrayList<Integer>();
+    for (int i=m_rsLow; i<=m_rsHigh; i++) {
+      list.addAll(m_hgBins.get(i).m_sampleIDs);
+    }
+    return list;
+  }
+  
+  
+  void brushSamples(ArrayList<Integer> samples) {
+    for (HistogramBin bin : m_hgBins) {
+      bin.brushSamples(samples);
     }
   }
   

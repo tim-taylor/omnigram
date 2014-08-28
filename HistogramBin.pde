@@ -13,7 +13,8 @@ class HistogramBin {
   color m_tileOutsideRangeSelection = 0xFFFFFFFF;
   color m_tileStrokeColor = 0xFF909090;
   
-  ArrayList<Integer> m_cols; // records number of tiles in each column
+  ArrayList<Integer> m_tilesPerCol;         // records number of tiles in each column
+  ArrayList<Integer> m_brushedTilesPerCol;
   int m_x; // x pos of bottom-left corner of bin, relative to left edge of histogram window
   int m_y; // y pos of bottom-left corner of bin, relative to top edge of histogram window
   
@@ -21,13 +22,15 @@ class HistogramBin {
     m_node = node;
     m_idx = idx;
     m_sampleIDs = sampleIDs;
-    m_cols = new ArrayList<Integer>();
+    m_tilesPerCol = new ArrayList<Integer>();
+    m_brushedTilesPerCol = new ArrayList<Integer>();
     m_x = x;
     m_y = y;
     int numTiles = ceil((float)numSamples / (float)m_sNumSamplesPerTile);
     while (numTiles > 0) {
       int colSize = min(numTiles, m_sMaxTileStack);
-      m_cols.add(colSize);
+      m_tilesPerCol.add(colSize);
+      m_brushedTilesPerCol.add(0);
       numTiles -= colSize;
     }    
     equaliseCols();
@@ -35,7 +38,7 @@ class HistogramBin {
   
   
   int numCols() {
-    return m_cols.size();
+    return m_tilesPerCol.size();
   }
   
   
@@ -47,22 +50,22 @@ class HistogramBin {
   
   int getRColLX() {
     // return the x pos of the left hand side of the rightmost column
-    if (m_cols.isEmpty()) {
+    if (m_tilesPerCol.isEmpty()) {
       return m_x;
     }
     else {
-      return m_x + (m_cols.size()-1)*m_sTileDim;
+      return m_x + (m_tilesPerCol.size()-1)*m_sTileDim;
     }
   }
   
   
   int getRColRX() {
     // return the x pos of the right hand side of the rightmost column
-    if (m_cols.isEmpty()) {
+    if (m_tilesPerCol.isEmpty()) {
       return m_x;
     }
     else {
-      return m_x + (m_cols.size())*m_sTileDim;
+      return m_x + (m_tilesPerCol.size())*m_sTileDim;
     }
   }  
   
@@ -70,40 +73,46 @@ class HistogramBin {
   void draw() {
     stroke(m_tileStrokeColor);
 
-    if (inSelectedRange()) {
-      fill(m_tileInRangeSelection);
-    }
-    else {
-      fill(m_tileOutsideRangeSelection);
-    }
+    
 
     int x = m_x;
-    for (Integer numTiles : m_cols) {
+    int c = 0;
+    for (Integer numTiles : m_tilesPerCol) {
       int y = m_y;
       for (int i=0; i<numTiles; i++) {
         //println(numTiles+", "+i+", "+x+" "+y+", "+m_sTileDim);
+        if (i < m_brushedTilesPerCol.get(c)) {
+          fill(0xFF2222DD);
+        }
+        else if (inSelectedRange()) {
+          fill(m_tileInRangeSelection);
+        }
+        else {
+          fill(m_tileOutsideRangeSelection);
+        }
         rect(x, y-m_sTileDim, m_sTileDim, m_sTileDim);
         y -= m_sTileDim;
       }
       x += m_sTileDim;
+      c++;
     }
   }
   
   
   void equaliseCols() {
     // balance the height of each column in this histogram bin
-    int nCols = m_cols.size();
+    int nCols = m_tilesPerCol.size();
     if (nCols < 2) {
       return;
     }
-    int lastColH = m_cols.get(nCols-1);
+    int lastColH = m_tilesPerCol.get(nCols-1);
     int d = m_sMaxTileStack - lastColH;
     if (d > 0) {
       int d1 = ceil((float)d / (float)nCols);
       for (int i=0; i<nCols-1; i++) {
-        m_cols.set(i, m_cols.get(i)-d1);
+        m_tilesPerCol.set(i, m_tilesPerCol.get(i)-d1);
       }
-      m_cols.set(nCols-1, m_cols.get(nCols-1)+(d1*(nCols-1)));
+      m_tilesPerCol.set(nCols-1, m_tilesPerCol.get(nCols-1)+(d1*(nCols-1)));
     }
   }
   
@@ -111,6 +120,44 @@ class HistogramBin {
   boolean inSelectedRange() {
     // is this bin within the range currently selected by the Range Selector slider?
     return ((m_idx >= m_node.m_rsLow) && (m_idx <= m_node.m_rsHigh));
+  }
+  
+  
+  void brushSamples(ArrayList<Integer> samples) {
+    // highlight a fraction of the tiles in this bin according to how many
+    // of this bin's samples are in the selected set passed into this method
+    
+    ArrayList<Integer> smallList;
+    ArrayList<Integer> bigList;
+    
+    if (samples.size() > m_sampleIDs.size()) {
+      smallList = m_sampleIDs;
+      bigList = samples;
+    }
+    else {
+      smallList = samples;
+      bigList = m_sampleIDs;
+    }
+    
+    int matches = 0;
+    
+    for (Integer sampleID : smallList) {
+      if (bigList.contains(sampleID)) {
+        matches++;
+      }
+    }
+    
+    float matchFrac = (float)matches / (float)m_sampleIDs.size();
+    int numTiles = ceil((((float)m_sampleIDs.size()) * matchFrac) / (float)m_sNumSamplesPerTile);
+    int nCols = m_tilesPerCol.size();
+    int nTilesPerCol = ceil((float)numTiles / (float)nCols);
+    int tilesLeft = numTiles;
+    
+    for (int i=0; i<m_brushedTilesPerCol.size(); i++) {
+      m_brushedTilesPerCol.set(i, min(nTilesPerCol, tilesLeft));
+      tilesLeft -= nTilesPerCol;
+    }
+   
   }
   
 }
