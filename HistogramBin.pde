@@ -150,6 +150,8 @@ class HistogramBin {
     // highlight a fraction of the tiles in this bin according to how many
     // of this bin's samples are in the selected set passed into this method
     
+    //println("Brushing node "+m_node.m_name+" sampleIDs.size="+m_sampleIDs.size()+", samples.size="+samples.size());
+    
     ArrayList<Integer> smallList;
     ArrayList<Integer> bigList;
     
@@ -174,11 +176,13 @@ class HistogramBin {
     int numTiles = ceil((((float)m_sampleIDs.size()) * matchFrac) / (float)m_sNumSamplesPerTile);
     int nCols = m_tilesPerCol.size();
     int nTilesPerCol = ceil((float)numTiles / (float)nCols);
-    int tilesLeft = numTiles;
+    //println("matchFrac="+matchFrac+", numTiles="+numTiles+", nCols="+nCols+", nTilesPerCol="+nTilesPerCol);
     
+    int tilesLeft = numTiles;
     for (int i=0; i<m_brushedTilesPerCol.size(); i++) {
-      m_brushedTilesPerCol.set(i, min(nTilesPerCol, tilesLeft));
-      tilesLeft -= nTilesPerCol;
+      int numBrushed = min(tilesLeft, m_tilesPerCol.get(i));
+      m_brushedTilesPerCol.set(i, numBrushed);
+      tilesLeft -= numBrushed;
     }
   }
   
