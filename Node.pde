@@ -233,6 +233,7 @@ public abstract class Node {
         ///////////// MOUSE IS IN THE HISTOGRAM AREA ///////////////////////////////////////////////
         m_model.setInteractionMode(InteractionMode.SingleNodeBrushing);
         m_model.setSingleFocus(m_id);
+        m_model.brushAllNodesOnOneSelection(this);
       }
       else if (mouseY >= m_y + m_mbH + m_hgH && mouseY <= m_y + m_mbH + m_hgH + m_rsH) {
         ///////////// MOUSE IS IN THE RANGE SELECTOR AREA //////////////////////////////////////////
