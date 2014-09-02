@@ -1,7 +1,7 @@
 public enum InteractionMode {
   SingleNodeBrushing,
-  LeafNodeRangesSet,
-  RootNodeRangesSet,
+  MultiNodeBrushing,
+  SensitivityAnalysis,
   Unassigned
 }
 

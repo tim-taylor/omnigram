@@ -191,13 +191,18 @@ void mouseDragged() {
 
 }
 
-/*
+
 void keyPressed() {
-  if (key == 'c') {
-    connectFocalDials();
+  if (key == '+') {
+    globalZoom++;
+    redraw();
+  }
+  else if (key == '-') {
+    globalZoom--;
+    redraw();
   }
 }
-*/
+
 
 /*
 void connectFocalDials() {

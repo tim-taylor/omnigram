@@ -10,6 +10,7 @@ public abstract class Node {
   int m_sNodeH = 200;   // height of Node widget, same for all nodes 
   int m_x;              // x position of top-left corner
   int m_y;              // y position of top-left corner
+  int m_nodeZoom = 100;
   
   protected int m_mbH = 25;  // menu bar height
   protected int m_hgH;       // histogram height (= m_sNodeH - m_mbH - m_rsH - m_lbH)
@@ -136,15 +137,13 @@ public abstract class Node {
   }
 
 
-  void draw(int globalZoom, int nodeZoom) {
+  void draw(int nodeZoom) {
+    
+    m_nodeZoom = nodeZoom;
     
     pushMatrix();
-    
-    //int midX = m_sNodeW/2;
-    //int midY = m_sNodeH/2;
-    //globalZoom = 80;
-    
-    scale(((float)globalZoom)/100.0);
+
+    scale(((float)m_model.m_globalZoom)/100.0);
     
     translate(m_x, m_y);
     
@@ -154,6 +153,17 @@ public abstract class Node {
     drawLabelBar();
          
     popMatrix();
+    
+    ////////////////////////////////////////////////
+    /*
+    pushStyle();
+    int x = scaledMouseX();
+    int y = scaledMouseY();
+    fill(0xFFFF0000);
+    ellipse(x,y,5,5);
+    popStyle();
+    */
+    /////////
   }
 
   
@@ -223,19 +233,19 @@ public abstract class Node {
   
   void mousePressed() {
     
-    m_mousePressX = mouseX;
-    m_mousePressY = mouseY;
+    m_mousePressX = scaledMouseX();
+    m_mousePressY = scaledMouseY();
     
-    if (mouseX >= m_x && mouseX < m_x + m_sNodeW && mouseY >= m_y && mouseY <= m_y + m_sNodeH) {
+    if (scaledMouseX() >= m_x && scaledMouseX() < m_x + m_sNodeW && scaledMouseY() >= m_y && scaledMouseY() <= m_y + m_sNodeH) {
       // the mouse has been pressed within this node, so figure out what we need to do about it!
       
-      if (mouseY >= m_y + m_mbH && mouseY < m_y + m_mbH + m_hgH) {
+      if (scaledMouseY() >= m_y + m_mbH && scaledMouseY() < m_y + m_mbH + m_hgH) {
         ///////////// MOUSE IS IN THE HISTOGRAM AREA ///////////////////////////////////////////////
         m_model.setInteractionMode(InteractionMode.SingleNodeBrushing);
         m_model.setSingleFocus(m_id);
         m_model.brushAllNodesOnOneSelection(this);
       }
-      else if (mouseY >= m_y + m_mbH + m_hgH && mouseY <= m_y + m_mbH + m_hgH + m_rsH) {
+      else if (scaledMouseY() >= m_y + m_mbH + m_hgH && scaledMouseY() <= m_y + m_mbH + m_hgH + m_rsH) {
         ///////////// MOUSE IS IN THE RANGE SELECTOR AREA //////////////////////////////////////////
         
         int llx = m_hgBins.get(m_rsLow).getLColLX();
@@ -244,8 +254,8 @@ public abstract class Node {
         
         if (m_rsLow == m_rsHigh) {
           // first deal with special case where both range selectors are in the same position
-          if (mouseX >= m_x + llx && mouseX <= m_x + llx + m_rsHandleW) {
-            if (mouseY <= (m_y + m_mbH + m_hgH + (m_rsH/2))) {
+          if (scaledMouseX() >= m_x + llx && scaledMouseX() <= m_x + llx + m_rsHandleW) {
+            if (scaledMouseY() <= (m_y + m_mbH + m_hgH + (m_rsH/2))) {
               // is top half of handle pressed, call it a right handle press
               m_rsRightHandlePressed = true;
             }
@@ -256,15 +266,15 @@ public abstract class Node {
           }
         }
         else {
-          if (mouseX >= m_x + llx && mouseX <= m_x + llx + m_rsHandleW) {
+          if (scaledMouseX() >= m_x + llx && scaledMouseX() <= m_x + llx + m_rsHandleW) {
             // left handle pressed
             m_rsLeftHandlePressed = true;
           }
-          else if (mouseX >= m_x + rlx && mouseX <= m_x + rlx + m_rsHandleW) {
+          else if (scaledMouseX() >= m_x + rlx && scaledMouseX() <= m_x + rlx + m_rsHandleW) {
             // right handle pressed
             m_rsRightHandlePressed = true;
           }
-          else if (mouseX > m_x + llx + m_rsHandleW && mouseX < m_x + rlx) {
+          else if (scaledMouseX() > m_x + llx + m_rsHandleW && scaledMouseX() < m_x + rlx) {
             // bin between the handles pressed
             m_rsBarPressed = true;
             m_rsMousePressLLDeltaX = m_mousePressX - (m_x + llx);
@@ -273,7 +283,7 @@ public abstract class Node {
         }
         
       }
-      else if (mouseY >= m_y + m_mbH + m_hgH + m_rsH) {
+      else if (scaledMouseY() >= m_y + m_mbH + m_hgH + m_rsH) {
         ///////////// MOUSE IS IN THE LABEL BAR AREA ///////////////////////////////////////////////
         m_bNodeDragged = true;
       }
@@ -296,8 +306,8 @@ public abstract class Node {
     
     if (m_bNodeDragged) {
       ///////////// WHOLE NODE DRAGGED /////////////////////////////////////////////////
-      m_x += (mouseX - pmouseX);
-      m_y += (mouseY - pmouseY);
+      m_x += (scaledMouseX() - scaledPMouseX());
+      m_y += (scaledMouseY() - scaledPMouseY());
       constrain(m_x, 0, width - m_sNodeW);
       constrain(m_y, 0, height - m_sNodeH);      
     }
@@ -305,12 +315,12 @@ public abstract class Node {
       ///////////// RANGE SELECTOR LEFT HANDLE DRAGGED /////////////////////////////////
       int llx = m_hgBins.get(m_rsLow).getLColLX();
       int rrx = m_hgBins.get(m_rsLow).getRColRX();    
-      if (mouseX < m_x) {
+      if (scaledMouseX() < m_x) {
         m_rsLow = 0;
       }
-      else if ((mouseX < m_x + llx) && (m_rsLow > 0)) {
+      else if ((scaledMouseX() < m_x + llx) && (m_rsLow > 0)) {
         for (int i = m_rsLow-1; i >= 0; i--) {
-          if (mouseX < m_x + m_hgBins.get(i).getRColRX()) {
+          if (scaledMouseX() < m_x + m_hgBins.get(i).getRColRX()) {
             m_rsLow = i;
           }
           else {
@@ -318,9 +328,9 @@ public abstract class Node {
           }
         } 
       }
-      else if ((mouseX > m_x + rrx) && (m_rsLow < m_rsHigh)) {
+      else if ((scaledMouseX() > m_x + rrx) && (m_rsLow < m_rsHigh)) {
         for (int i = m_rsLow+1; i <= m_rsHigh; i++) {
-          if (mouseX > m_x + m_hgBins.get(i).getLColLX()) {
+          if (scaledMouseX() > m_x + m_hgBins.get(i).getLColLX()) {
             m_rsLow = i;
           }
           else {
@@ -333,12 +343,12 @@ public abstract class Node {
       ///////////// RANGE SELECTOR RIGHT HANDLE DRAGGED ////////////////////////////////
       int llx = m_hgBins.get(m_rsHigh).getLColLX();
       int rrx = m_hgBins.get(m_rsHigh).getRColRX();    
-      if (mouseX < m_x) {
+      if (scaledMouseX() < m_x) {
         m_rsHigh = m_rsLow;
       }
-      else if ((mouseX < m_x + llx) && (m_rsHigh > m_rsLow)) {
+      else if ((scaledMouseX() < m_x + llx) && (m_rsHigh > m_rsLow)) {
         for (int i = m_rsHigh-1; i >= m_rsLow; i--) {
-          if (mouseX < m_x + m_hgBins.get(i).getRColRX()) {
+          if (scaledMouseX() < m_x + m_hgBins.get(i).getRColRX()) {
             m_rsHigh = i;
           }
           else {
@@ -346,9 +356,9 @@ public abstract class Node {
           }
         } 
       }
-      else if ((mouseX > m_x + rrx) && (m_rsHigh < m_hgNumBins-1)) {
+      else if ((scaledMouseX() > m_x + rrx) && (m_rsHigh < m_hgNumBins-1)) {
         for (int i = m_rsHigh+1; i <= m_hgNumBins-1; i++) {
-          if (mouseX > m_x + m_hgBins.get(i).getLColLX()) {
+          if (scaledMouseX() > m_x + m_hgBins.get(i).getLColLX()) {
             m_rsHigh = i;
           }
           else {
@@ -361,15 +371,15 @@ public abstract class Node {
       ///////////// RANGE SELECTOR BAR BETWEEN HANDLES DRAGGED /////////////////////////
       int llx = m_hgBins.get(m_rsLow).getLColLX();
       int rrx = m_hgBins.get(m_rsLow).getRColRX(); 
-      if (mouseX < m_x) {
+      if (scaledMouseX() < m_x) {
         // moving to extreme left
         m_rsHigh -= m_rsLow;
         m_rsLow = 0;
       }
-      else if ((mouseX < pmouseX) && (m_rsLow > 0)) {
+      else if ((scaledMouseX() < scaledPMouseX()) && (m_rsLow > 0)) {
         // moving left
         for (int i = m_rsLow; i >= 0; i--) {
-          if ((mouseX - m_rsMousePressLLDeltaX) < (m_x + m_hgBins.get(i).getRColRX())) {
+          if ((scaledMouseX() - m_rsMousePressLLDeltaX) < (m_x + m_hgBins.get(i).getRColRX())) {
             m_rsHigh -= (m_rsLow-i);
             m_rsLow = i;
           }
@@ -378,10 +388,10 @@ public abstract class Node {
           }
         } 
       }
-      else if ((mouseX > pmouseX) && (m_rsHigh < m_hgNumBins-1)) {
+      else if ((scaledMouseX() > scaledPMouseX()) && (m_rsHigh < m_hgNumBins-1)) {
         // moving right
         for (int i = m_rsHigh+1; i <= m_hgNumBins-1; i++) {
-          if (mouseX + m_rsMousePressRRDeltaX > m_x + m_hgBins.get(i).getLColLX()) {
+          if (scaledMouseX() + m_rsMousePressRRDeltaX > m_x + m_hgBins.get(i).getLColLX()) {
             m_rsLow += (i-m_rsHigh);
             m_rsHigh = i;
           }
@@ -419,7 +429,22 @@ public abstract class Node {
       bin.resetBrushing();
     }
   }
+  
+  int scaledMouseX() {
+    return (int)((float)(mouseX * 100.0) / m_model.m_globalZoom);
+  }
+  
+  int scaledMouseY() {
+    return (int)((float)(mouseY * 100.0) / m_model.m_globalZoom);
+  }
 
+  int scaledPMouseX() {
+    return (int)((float)(pmouseX * 100.0) / m_model.m_globalZoom);
+  }
+  
+  int scaledPMouseY() {
+    return (int)((float)(pmouseY * 100.0) / m_model.m_globalZoom);
+  }
 
   //////////// LEGACY STUFF //////////////////////////////
   

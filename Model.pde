@@ -22,6 +22,9 @@ public class Model {
   // current mode of interaction
   InteractionMode m_interactionMode = InteractionMode.Unassigned;
   
+  // global information about appearance
+  int m_globalZoom = 100;
+  
   //////////// METHODS //////////////////
   
   Model(String configXMLfilename) {
@@ -246,9 +249,10 @@ public class Model {
   
   
   void draw(int globalZoom, int nodeZoom) {
+    m_globalZoom = globalZoom;
     checkAllNodesSafe();
     for (Node node : m_allNodes) {
-      node.draw(globalZoom, nodeZoom);
+      node.draw(nodeZoom);
     }
   }
   
