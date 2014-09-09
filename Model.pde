@@ -25,6 +25,13 @@ public class Model {
   // global information about appearance
   int m_globalZoom = 100;
   
+  // global UI items
+  int     m_menuH = 50;
+  boolean m_menuVisible = false;
+  color   m_menuTextColor = 0xFF101010;
+  color   m_windowBackgroundColor = 0xFF808080; //0xFF909090;
+  PFont   m_mediumFont;  
+  
   //////////// METHODS //////////////////
   
   Model(String configXMLfilename) {
@@ -143,7 +150,8 @@ public class Model {
     m_lnodes   = new ArrayList<Node>();
     m_allNodes = new ArrayList<Node>();
     m_allNodesSafe = false;
-    m_modelDataLabelCol = 0;      
+    m_modelDataLabelCol = 0;
+    m_mediumFont = createFont("Arial", 16, true);
   }
 
 
@@ -215,16 +223,43 @@ public class Model {
   }
   
   
+  void setMultiFocus(int nodeIdx) {
+    checkAllNodesSafe();
+    for (Node node : m_allNodes) {
+      if (node.m_id == nodeIdx) {
+        node.m_bHasFocus = true;
+      }
+    }
+  }  
+  
+  
   void setInteractionMode(InteractionMode mode) {
     switch (mode) {
       case SingleNodeBrushing: {
         m_interactionMode = InteractionMode.SingleNodeBrushing;
         resetAllBrushing();
+        checkAllNodesSafe();
+        // now ensure that at most one Node has the focus
+        for (Node node : m_allNodes) {
+          if (node.m_bHasFocus) {
+            setSingleFocus(node.m_id);
+            brushAllNodesOnOneSelection(node);
+            redraw();
+            break;
+          }
+        }
         break;  
+      }
+      case MultiNodeBrushing: {
+        m_interactionMode = InteractionMode.MultiNodeBrushing;
+        resetAllBrushing();
+        brushAllNodesOnMultiSelection();
+        redraw();
+        break;
       }
       case Unassigned:
       default: {
-        // TO DO...
+        println("Unexpected Interaction Mode in Model.setInteractionMode!");
       }
     }
   }
@@ -241,6 +276,58 @@ public class Model {
   }
   
   
+  void brushAllNodesOnMultiSelection() {
+    
+    /*
+    // TO DO...
+    // as a hack, do the following:
+    // for each sample in data, ask if it is in selected ranges in Node 1 and in Node 2
+    // if so, show it in Node 3
+    println("Hey hey");
+    int numSamplesAll = m_data.size();
+    m_allNodes.get(2).resetBrushing();
+    for (int i=0; i<numSamplesAll; i++) {
+      if (m_allNodes.get(0).sampleSelected(i) && m_allNodes.get(1).sampleSelected(i)) {
+        println("Sample "+i+" selected");
+        m_allNodes.get(2).brushSampleAdd(i);
+      }
+    }
+    */
+    
+    ArrayList<Node> focalNodes = new ArrayList<Node>();
+    ArrayList<Node> otherNodes = new ArrayList<Node>();
+    for (Node node : m_allNodes) {
+      if (node.m_bHasFocus) {
+        focalNodes.add(node);
+      }
+      else {
+        otherNodes.add(node);
+      }
+    }
+    
+    for (Node onode : otherNodes) {
+      onode.resetBrushing();
+    }    
+    
+    int numSamplesAll = m_data.size();
+    for (int i=0; i<numSamplesAll; i++) {
+      boolean sampleSelectedInAllFocal = true;
+      for (Node fnode : focalNodes) {
+        if (!(fnode.sampleSelected(i))) {
+          sampleSelectedInAllFocal = false;
+          break;
+        }
+      }
+      if (sampleSelectedInAllFocal) {
+        for (Node onode : otherNodes) {
+          onode.brushSampleAdd(i);
+        }
+      }
+    }
+    
+  }  
+  
+  
   void resetAllBrushing() {
     for (Node node : m_allNodes) {
       node.resetBrushing();
@@ -249,10 +336,55 @@ public class Model {
   
   
   void draw(int globalZoom, int nodeZoom) {
+    
+    background(m_windowBackgroundColor);
+    
     m_globalZoom = globalZoom;
+    
     checkAllNodesSafe();
     for (Node node : m_allNodes) {
       node.draw(nodeZoom);
+    }
+    
+    if (mouseY < m_menuH) {
+      if (mouseY < pmouseY) {
+        m_menuVisible = true;
+      }
+    }
+    else {
+      m_menuVisible = false;
+    }
+    
+    if (m_menuVisible) {
+      fill(0x00000000);
+      rect(0, 0, width, m_menuH);
+      String mode;
+      switch (m_interactionMode) {
+        case SingleNodeBrushing:
+          mode = "Single Node";
+          break;
+        case MultiNodeBrushing:
+          mode = "Multi Node";
+          break;
+        default:
+          mode = "(no mode set)";
+      }
+      textFont(m_mediumFont, 16);
+      textAlign(LEFT);
+      fill(0xFFEEEE30 /*m_menuTextColor*/);
+      text(mode, 30, 30);
+      
+      /*
+      pushMatrix();
+      translate(0, m_mbH+m_hgH+m_rsH);
+      fill(m_lbBackgroundColor);
+      rect(0, 0, m_sNodeW, m_lbH);    
+      textFont(mediumFont, 16);
+      fill(m_lbForegroundColor);
+      textAlign(CENTER);
+      text(m_name, m_sNodeW/2, m_lbH-8);
+      popMatrix();      
+      */
     }
   }
   

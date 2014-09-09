@@ -5,9 +5,9 @@ public abstract class Node {
   String m_name;        // human readable name of node
   
   // Widget appearance and position
-  PFont m_font;  
   int m_sNodeW = 330;   // width of Node widget, same for all nodes 
-  int m_sNodeH = 200;   // height of Node widget, same for all nodes 
+  int m_sNodeH = 200;   // height of Node widget, same for all nodes
+  //int m_sNodeH = 450;   // height of Node widget, same for all nodes 
   int m_x;              // x position of top-left corner
   int m_y;              // y position of top-left corner
   int m_nodeZoom = 100;
@@ -217,7 +217,7 @@ public abstract class Node {
     translate(0, m_mbH+m_hgH+m_rsH);
     fill(m_lbBackgroundColor);
     rect(0, 0, m_sNodeW, m_lbH);    
-    textFont(mediumFont, 16);
+    textFont(m_model.m_mediumFont, 16);
     fill(m_lbForegroundColor);
     textAlign(CENTER);
     text(m_name, m_sNodeW/2, m_lbH-8);
@@ -241,44 +241,67 @@ public abstract class Node {
       
       if (scaledMouseY() >= m_y + m_mbH && scaledMouseY() < m_y + m_mbH + m_hgH) {
         ///////////// MOUSE IS IN THE HISTOGRAM AREA ///////////////////////////////////////////////
+        
+        switch (m_model.m_interactionMode) {
+          case SingleNodeBrushing:
+            m_model.setSingleFocus(m_id);
+            m_model.brushAllNodesOnOneSelection(this);          
+            break;
+          case MultiNodeBrushing:
+            m_model.setMultiFocus(m_id);
+            m_model.brushAllNodesOnMultiSelection();          
+            break;
+          default:
+            println("Unexpected interaction mode in Node.mousePressed()!");
+        }
+        /*
         m_model.setInteractionMode(InteractionMode.SingleNodeBrushing);
         m_model.setSingleFocus(m_id);
         m_model.brushAllNodesOnOneSelection(this);
+        */
+        /*
+        println("Hello!");
+        m_model.setInteractionMode(InteractionMode.MultiNodeBrushing);
+        m_model.setMultiFocus(m_id);
+        m_model.brushAllNodesOnMultiSelection();
+        */
       }
       else if (scaledMouseY() >= m_y + m_mbH + m_hgH && scaledMouseY() <= m_y + m_mbH + m_hgH + m_rsH) {
         ///////////// MOUSE IS IN THE RANGE SELECTOR AREA //////////////////////////////////////////
         
-        int llx = m_hgBins.get(m_rsLow).getLColLX();
-        int rlx = m_hgBins.get(m_rsHigh).getRColLX();
-        int rrx = m_hgBins.get(m_rsHigh).getRColRX();
-        
-        if (m_rsLow == m_rsHigh) {
-          // first deal with special case where both range selectors are in the same position
-          if (scaledMouseX() >= m_x + llx && scaledMouseX() <= m_x + llx + m_rsHandleW) {
-            if (scaledMouseY() <= (m_y + m_mbH + m_hgH + (m_rsH/2))) {
-              // is top half of handle pressed, call it a right handle press
-              m_rsRightHandlePressed = true;
+        if (rangeSelectorActive()) {
+          int llx = m_hgBins.get(m_rsLow).getLColLX();
+          int rlx = m_hgBins.get(m_rsHigh).getRColLX();
+          int rrx = m_hgBins.get(m_rsHigh).getRColRX();
+          
+          if (m_rsLow == m_rsHigh) {
+            // first deal with special case where both range selectors are in the same position
+            if (scaledMouseX() >= m_x + llx && scaledMouseX() <= m_x + llx + m_rsHandleW) {
+              if (scaledMouseY() <= (m_y + m_mbH + m_hgH + (m_rsH/2))) {
+                // is top half of handle pressed, call it a right handle press
+                m_rsRightHandlePressed = true;
+              }
+              else {
+                // else if bottom half pressed, call it a left handle press
+                m_rsLeftHandlePressed = true;
+              }
             }
-            else {
-              // else if bottom half pressed, call it a left handle press
+          }
+          else {
+            if (scaledMouseX() >= m_x + llx && scaledMouseX() <= m_x + llx + m_rsHandleW) {
+              // left handle pressed
               m_rsLeftHandlePressed = true;
             }
-          }
-        }
-        else {
-          if (scaledMouseX() >= m_x + llx && scaledMouseX() <= m_x + llx + m_rsHandleW) {
-            // left handle pressed
-            m_rsLeftHandlePressed = true;
-          }
-          else if (scaledMouseX() >= m_x + rlx && scaledMouseX() <= m_x + rlx + m_rsHandleW) {
-            // right handle pressed
-            m_rsRightHandlePressed = true;
-          }
-          else if (scaledMouseX() > m_x + llx + m_rsHandleW && scaledMouseX() < m_x + rlx) {
-            // bin between the handles pressed
-            m_rsBarPressed = true;
-            m_rsMousePressLLDeltaX = m_mousePressX - (m_x + llx);
-            m_rsMousePressRRDeltaX = (m_x + rrx) - m_mousePressX;
+            else if (scaledMouseX() >= m_x + rlx && scaledMouseX() <= m_x + rlx + m_rsHandleW) {
+              // right handle pressed
+              m_rsRightHandlePressed = true;
+            }
+            else if (scaledMouseX() > m_x + llx + m_rsHandleW && scaledMouseX() < m_x + rlx) {
+              // bin between the handles pressed
+              m_rsBarPressed = true;
+              m_rsMousePressLLDeltaX = m_mousePressX - (m_x + llx);
+              m_rsMousePressRRDeltaX = (m_x + rrx) - m_mousePressX;
+            }
           }
         }
         
@@ -403,7 +426,16 @@ public abstract class Node {
     }
     
     if (m_rsLow != rsLowOld || m_rsHigh != rsHighOld) {
-      m_model.brushAllNodesOnOneSelection(this);
+      switch(m_model.m_interactionMode) {
+        case SingleNodeBrushing:
+          m_model.brushAllNodesOnOneSelection(this);
+          break;
+        case MultiNodeBrushing:
+          m_model.brushAllNodesOnMultiSelection();
+          break;
+        default:
+          println("I shouldn't be here!!");
+      }
     }
   }
   
@@ -424,11 +456,47 @@ public abstract class Node {
   }
   
   
+  void brushSample(int sampleID) {
+    for (HistogramBin bin : m_hgBins) {
+      bin.brushSample(sampleID);
+    }
+  }
+  
+  
+  void brushSampleAdd(int sampleID) {
+    for (HistogramBin bin : m_hgBins) {
+      bin.brushSampleAdd(sampleID);
+    }
+  }  
+  
+  
+  boolean sampleSelected(int sampleID) {
+    boolean selected = false;
+    for (int i=m_rsLow; ((i<=m_rsHigh) && (!selected)); i++) {
+      selected = m_hgBins.get(i).sampleInBin(sampleID);
+    }    
+    return selected;
+  }
+  
+  
   void resetBrushing() {
     for (HistogramBin bin : m_hgBins) {
       bin.resetBrushing();
     }
   }
+  
+  
+  boolean rangeSelectorActive() {
+    switch (m_model.m_interactionMode) {
+      case MultiNodeBrushing:
+        return m_bHasFocus;
+      case SingleNodeBrushing:
+        return m_bHasFocus;
+      default:
+        return true;
+    }
+  }
+  
   
   int scaledMouseX() {
     return (int)((float)(mouseX * 100.0) / m_model.m_globalZoom);
@@ -529,7 +597,6 @@ public abstract class Node {
     m_dialMax = 100;
     m_dialLow = 0;
     m_dialHigh = 100;
-    m_font = createFont("Arial",16,true);
     m_bDragged = false;
     m_bHasFocus = false;
     m_widgetBackgroundColor = 0xFF151515; //0x20151515;

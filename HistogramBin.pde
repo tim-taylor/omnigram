@@ -3,6 +3,11 @@ class HistogramBin {
   int m_sTileDim = 8;
   int m_sMaxTileStack = 15;
   int m_sNumSamplesPerTile = 5;
+  /*  
+  int m_sTileDim = 5;
+  int m_sMaxTileStack = 100;
+  int m_sNumSamplesPerTile = 1;
+  */
   
   Node m_node; // reference to associated node
   int m_idx;   // 0-based index to this bin, as used in m_node.m_hgBins
@@ -82,7 +87,8 @@ class HistogramBin {
         //println(numTiles+", "+i+", "+x+" "+y+", "+m_sTileDim);
         
         switch (m_node.m_model.m_interactionMode) {
-          case SingleNodeBrushing: {
+          case SingleNodeBrushing:
+          case MultiNodeBrushing: {
             if (m_node.m_bHasFocus) {
               if (inSelectedRange()) {
                 fill(m_tileInRangeSelection);
@@ -178,19 +184,71 @@ class HistogramBin {
     int nTilesPerCol = ceil((float)numTiles / (float)nCols);
     //println("matchFrac="+matchFrac+", numTiles="+numTiles+", nCols="+nCols+", nTilesPerCol="+nTilesPerCol);
     
+    brushTiles(numTiles);
+  }
+  
+  
+  void brushTiles(int numTiles) {
     int tilesLeft = numTiles;
     for (int i=0; i<m_brushedTilesPerCol.size(); i++) {
       int numBrushed = min(tilesLeft, m_tilesPerCol.get(i));
       m_brushedTilesPerCol.set(i, numBrushed);
       tilesLeft -= numBrushed;
+    }    
+  }
+  
+  
+  int numTilesBrushed() {
+    int n = 0;
+    for (int i=0; i<m_brushedTilesPerCol.size(); i++) {
+      n += m_brushedTilesPerCol.get(i);
+    }     
+    return n;
+  }
+  
+  
+  void brushSample(int sampleID) {
+   
+    resetBrushing();
+    
+    if (m_sampleIDs.contains(sampleID)) {
+      
+      m_brushedTilesPerCol.set(0,1);
+    
+      /*
+      float matchFrac = 1.0;
+      int numTiles = ceil((((float)m_sampleIDs.size()) * matchFrac) / (float)m_sNumSamplesPerTile);
+      int nCols = m_tilesPerCol.size();
+      int nTilesPerCol = ceil((float)numTiles / (float)nCols);
+      //println("matchFrac="+matchFrac+", numTiles="+numTiles+", nCols="+nCols+", nTilesPerCol="+nTilesPerCol);
+      
+      int tilesLeft = numTiles;
+      for (int i=0; i<m_brushedTilesPerCol.size(); i++) {
+        int numBrushed = min(tilesLeft, m_tilesPerCol.get(i));
+        m_brushedTilesPerCol.set(i, numBrushed);
+        tilesLeft -= numBrushed;
+      }
+      */
+    
     }
   }
+  
+  
+  void brushSampleAdd(int sampleID) {
+    if (m_sampleIDs.contains(sampleID)) {
+      brushTiles(numTilesBrushed() + 1);
+    }
+  }  
   
   
   void resetBrushing() {
     for (int i=0; i<m_brushedTilesPerCol.size(); i++) {
       m_brushedTilesPerCol.set(i, 0);
     }    
+  }
+  
+  boolean sampleInBin(int sampleID) {
+    return m_sampleIDs.contains(sampleID);
   }
   
 }
