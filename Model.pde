@@ -28,9 +28,10 @@ public class Model {
   // global UI items
   int     m_menuH = 50;
   boolean m_menuVisible = false;
-  color   m_menuTextColor = 0xFF101010;
+  color   m_menuBackgroundColor = 0xFF000000;
+  color   m_menuTextColor = 0xFFEEEE30;
   color   m_windowBackgroundColor = 0xFF808080; //0xFF909090;
-  PFont   m_mediumFont;  
+  PFont   m_mediumFont;
   
   //////////// METHODS //////////////////
   
@@ -277,23 +278,7 @@ public class Model {
   
   
   void brushAllNodesOnMultiSelection() {
-    
-    /*
-    // TO DO...
-    // as a hack, do the following:
-    // for each sample in data, ask if it is in selected ranges in Node 1 and in Node 2
-    // if so, show it in Node 3
-    println("Hey hey");
-    int numSamplesAll = m_data.size();
-    m_allNodes.get(2).resetBrushing();
-    for (int i=0; i<numSamplesAll; i++) {
-      if (m_allNodes.get(0).sampleSelected(i) && m_allNodes.get(1).sampleSelected(i)) {
-        println("Sample "+i+" selected");
-        m_allNodes.get(2).brushSampleAdd(i);
-      }
-    }
-    */
-    
+  
     ArrayList<Node> focalNodes = new ArrayList<Node>();
     ArrayList<Node> otherNodes = new ArrayList<Node>();
     for (Node node : m_allNodes) {
@@ -311,16 +296,23 @@ public class Model {
     
     int numSamplesAll = m_data.size();
     for (int i=0; i<numSamplesAll; i++) {
+      int numMisses = 0;
       boolean sampleSelectedInAllFocal = true;
       for (Node fnode : focalNodes) {
         if (!(fnode.sampleSelected(i))) {
           sampleSelectedInAllFocal = false;
-          break;
+          //break;
+          numMisses++;
         }
       }
       if (sampleSelectedInAllFocal) {
         for (Node onode : otherNodes) {
           onode.brushSampleAdd(i);
+        }
+      }
+      else if (numMisses == 1) {
+        for (Node onode : otherNodes) {
+          onode.brushSampleAddNearMiss(i, numMisses);
         }
       }
     }
@@ -356,7 +348,7 @@ public class Model {
     }
     
     if (m_menuVisible) {
-      fill(0x00000000);
+      fill(m_menuBackgroundColor);
       rect(0, 0, width, m_menuH);
       String mode;
       switch (m_interactionMode) {
@@ -371,20 +363,8 @@ public class Model {
       }
       textFont(m_mediumFont, 16);
       textAlign(LEFT);
-      fill(0xFFEEEE30 /*m_menuTextColor*/);
+      fill(m_menuTextColor);
       text(mode, 30, 30);
-      
-      /*
-      pushMatrix();
-      translate(0, m_mbH+m_hgH+m_rsH);
-      fill(m_lbBackgroundColor);
-      rect(0, 0, m_sNodeW, m_lbH);    
-      textFont(mediumFont, 16);
-      fill(m_lbForegroundColor);
-      textAlign(CENTER);
-      text(m_name, m_sNodeW/2, m_lbH-8);
-      popMatrix();      
-      */
     }
   }
   

@@ -468,6 +468,13 @@ public abstract class Node {
       bin.brushSampleAdd(sampleID);
     }
   }  
+
+
+  void brushSampleAddNearMiss(int sampleID, int numMisses) {
+    for (HistogramBin bin : m_hgBins) {
+      bin.brushSampleAddNearMiss(sampleID, numMisses);
+    }
+  } 
   
   
   boolean sampleSelected(int sampleID) {
