@@ -9,8 +9,6 @@
 *
 */
 
-//PFont mediumFont;
-
 String modelLoaderFile = "auto-mpg-loader.xml";  // N.B. loader doesn't seem to cope with filenames that are symbolic links!
 
 int globalZoom = 100;
@@ -21,8 +19,6 @@ Model model;
 
 void setup() {
   size((displayWidth*80)/100, (displayHeight*80)/100);
-  
-  //mediumFont = createFont("Arial", 16, true); // Arial, 16 point, anti-aliasing on
   
   if (frame != null) {
     frame.setResizable(true);
@@ -39,8 +35,6 @@ void setup() {
 
 
 void draw() {
-
-  //background(0x808080);
   
   model.draw(globalZoom, nodeZoom);
 
@@ -87,17 +81,6 @@ void keyPressed() {
     default:
       break;
   }
-  
-  /*
-  if (key == '+') {
-    globalZoom++;
-    redraw();
-  }
-  else if (key == '-') {
-    globalZoom--;
-    redraw();
-  }
-  */
 }
 
 

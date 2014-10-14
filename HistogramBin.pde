@@ -18,11 +18,12 @@ class HistogramBin {
   color m_tileOutsideRangeSelection = 0xFFFFFFFF;
   color m_tileBrushed = 0xFF000088;
   color m_tileStrokeColor = 0xFF909090;
-  color[] m_tileBrushedNearMiss; // TO DO... this and m_brushedTilesNearMissPerCol both arrays?
+  color[] m_tileBrushedNearMiss;
   
   ArrayList<Integer> m_tilesPerCol;         // records number of tiles in each column
-  ArrayList<Integer> m_brushedTilesPerCol;
-  ArrayList<ArrayList<Integer>> m_brushedTilesNearMissPerCol;
+  ArrayList<Integer> m_brushedTilesPerCol;  // records number of brushed tiles per column (exact matches)
+  ArrayList<ArrayList<Integer>> m_brushedTilesNearMissPerCol; // records number of brushed tiles (near misses) per col
+                                                              // [
   int m_x; // x pos of bottom-left corner of bin, relative to left edge of histogram window
   int m_y; // y pos of bottom-left corner of bin, relative to top edge of histogram window
   
@@ -34,9 +35,14 @@ class HistogramBin {
     m_brushedTilesPerCol = new ArrayList<Integer>();
     
     m_brushedTilesNearMissPerCol = new ArrayList<ArrayList<Integer>>();
-    m_brushedTilesNearMissPerCol.add(new ArrayList<Integer>());
-    m_tileBrushedNearMiss = new color[1];
-    m_tileBrushedNearMiss[0] = 0xFF80EE80; // TO DO
+    for (int i=0; i<3; i++) {
+      m_brushedTilesNearMissPerCol.add(new ArrayList<Integer>());
+    }
+    
+    m_tileBrushedNearMiss = new color[3];
+    m_tileBrushedNearMiss[0] = 0xFFE0B0B0; // one miss
+    m_tileBrushedNearMiss[1] = 0xFFFFB0B0; // two misses
+    m_tileBrushedNearMiss[2] = 0xFFFFFFFF; // three or more misses
     
     m_x = x;
     m_y = y;
@@ -96,7 +102,25 @@ class HistogramBin {
         //println(numTiles+", "+i+", "+x+" "+y+", "+m_sTileDim);
         
         switch (m_node.m_model.m_interactionMode) {
-          case SingleNodeBrushing:
+          case SingleNodeBrushing: {
+            if (m_node.m_bHasFocus) {
+              if (inSelectedRange()) {
+                fill(m_tileInRangeSelection);
+              }
+              else {
+                fill(m_tileOutsideRangeSelection);
+              }
+            }
+            else {
+              if (i < m_brushedTilesPerCol.get(c)) {
+                fill(m_tileBrushed);
+              }
+              else {
+                fill(m_tileOutsideRangeSelection);
+              }
+            }
+            break;
+          }          
           case MultiNodeBrushing: {
             if (m_node.m_bHasFocus) {
               if (inSelectedRange()) {
@@ -111,7 +135,6 @@ class HistogramBin {
                 fill(m_tileBrushed);
               }
               else if (i < m_brushedTilesPerCol.get(c) + m_brushedTilesNearMissPerCol.get(0).get(c)) {
-                // TO DO: should only do this for multi node brushing
                 fill(m_tileBrushedNearMiss[0]);
               }
               else {

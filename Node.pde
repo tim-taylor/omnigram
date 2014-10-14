@@ -154,16 +154,6 @@ public abstract class Node {
          
     popMatrix();
     
-    ////////////////////////////////////////////////
-    /*
-    pushStyle();
-    int x = scaledMouseX();
-    int y = scaledMouseY();
-    fill(0xFFFF0000);
-    ellipse(x,y,5,5);
-    popStyle();
-    */
-    /////////
   }
 
   
