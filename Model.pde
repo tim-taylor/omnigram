@@ -310,7 +310,7 @@ public class Model {
           onode.brushSampleAdd(i);
         }
       }
-      else if (numMisses == 1) {
+      else if (numMisses > 0 && numMisses < 4 /*numMisses == 1*/) {
         for (Node onode : otherNodes) {
           onode.brushSampleAddNearMiss(i, numMisses);
         }
