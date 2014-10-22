@@ -97,6 +97,24 @@ class HistogramBin {
   
   
   void draw() {
+    switch (m_node.m_model.m_visualisationMode) {
+    case FullAutoHeightAdjust: {
+      drawFullAutoHeightAdjust();
+      break;
+    }
+    case Scaled: {
+      drawScaled();
+      break;
+    }
+    case FullAreaConserved:
+    default: {
+      drawFullAreaConserved();
+    }
+    }
+  }
+  
+  
+  void drawFullAutoHeightAdjust() {
     stroke(m_tileStrokeColor);
 
     int x = m_x;
@@ -173,7 +191,17 @@ class HistogramBin {
       }
       x += m_sTileDim;
       c++;
-    }
+    }    
+  }
+  
+  
+  void drawScaled() {
+    // TO DO...
+  }
+  
+  
+  void drawFullAreaConserved() {
+    // TO DO...
   }
   
   
@@ -258,6 +286,10 @@ class HistogramBin {
     }
   }  
   
+  
+  int numSamples() {
+    return m_sampleIDs.size();
+  }
   
   int numTilesBrushed() {
     int n = 0;

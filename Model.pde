@@ -22,6 +22,10 @@ public class Model {
   // current mode of interaction
   InteractionMode m_interactionMode = InteractionMode.Unassigned;
   
+  // mode of visualisation
+  VisualisationMode m_visualisationMode = VisualisationMode.FullAutoHeightAdjust;
+  boolean m_visTiled = true; // tiled or continuous?
+  
   // global information about appearance
   int m_globalZoom = 100;
   
