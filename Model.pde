@@ -36,6 +36,8 @@ public class Model {
   color   m_menuTextColor = 0xFFEEEE30;
   color   m_windowBackgroundColor = 0xFF808080; //0xFF909090;
   PFont   m_mediumFont;
+  int     m_defaultInterNodeGapV = 20;
+
   
   //////////// METHODS //////////////////
   
@@ -142,6 +144,7 @@ public class Model {
       for (Node node : m_allNodes) {
         node.initialiseHistogram();
       }
+      tileNodesV();
     }
   }
   
@@ -285,6 +288,7 @@ public class Model {
   
     ArrayList<Node> focalNodes = new ArrayList<Node>();
     ArrayList<Node> otherNodes = new ArrayList<Node>();
+    
     for (Node node : m_allNodes) {
       if (node.m_bHasFocus) {
         focalNodes.add(node);
@@ -296,7 +300,9 @@ public class Model {
     
     for (Node onode : otherNodes) {
       onode.resetBrushing();
-    }    
+    }
+
+    int numBrushes = m_allNodes.get(0).m_hgBins.get(0).m_sNumBrushes; // oh dear, that's a bit ugly...
     
     int numSamplesAll = m_data.size();
     for (int i=0; i<numSamplesAll; i++) {
@@ -311,12 +317,12 @@ public class Model {
       }
       if (sampleSelectedInAllFocal) {
         for (Node onode : otherNodes) {
-          onode.brushSampleAdd(i);
+          onode.brushSampleAdd(i, 0);
         }
       }
-      else if (numMisses > 0 && numMisses < 4 /*numMisses == 1*/) {
+      else if ((numMisses > 0) && (numMisses < numBrushes)) {
         for (Node onode : otherNodes) {
-          onode.brushSampleAddNearMiss(i, numMisses);
+          onode.brushSampleAdd(i, numMisses);
         }
       }
     }
@@ -329,6 +335,45 @@ public class Model {
       node.resetBrushing();
     }    
   }
+  
+  
+  void tileNodesV() {
+    // rearrange all nodes to have a constant vertical spacing between nodes
+    tileNodesV(m_rnodes);
+    tileNodesV(m_inodes);
+    tileNodesV(m_lnodes);
+  }
+  
+  
+  void tileNodesV(ArrayList<Node> nodes) {
+    // rearrange the given nodes to have a constant vertical spacing between nodes
+    int[] startpos = new int[nodes.size()];
+    for (int i=0; i<nodes.size(); i++) {
+      startpos[i] = nodes.get(i).m_y;
+    }
+    startpos = sort(startpos);
+    int curY = m_defaultInterNodeGapV;
+    int deltaY = m_defaultInterNodeGapV;
+    for (int i=0; i<nodes.size(); i++) {
+      Node node = getNodeFromY(nodes, startpos[i]);
+      node.setY(curY);
+      curY += (node.getH() + deltaY);
+    }
+  }
+  
+  
+  Node getNodeFromY(ArrayList<Node> nodes, int y) {
+    // Look for the node which has a Y position of y from the list of nodes passed in.
+    // If found, return that node, else return the first node in the list
+    assert(!nodes.isEmpty());
+    for (Node node : nodes) {
+      if (node.m_y == y) {
+        return node;
+      }
+    }
+    return nodes.get(0);
+  }
+  
   
   
   void draw(int globalZoom, int nodeZoom) {

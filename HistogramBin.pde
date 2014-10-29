@@ -1,102 +1,112 @@
 class HistogramBin {
   
-  int m_sTileDim = 8;
-  int m_sMaxTileStack = 15;
-  int m_sNumSamplesPerTile = 5;
-  int m_sMaxBrushNearMisses = 3;
-  /*  
-  int m_sTileDim = 5;
-  int m_sMaxTileStack = 100;
-  int m_sNumSamplesPerTile = 1;
-  */
-  
+  // relationship to owning Node object
   Node m_node; // reference to associated node
   int m_idx;   // 0-based index to this bin, as used in m_node.m_hgBins
   
+  // info on the sampleIDs held in this bin
   ArrayList<Integer> m_sampleIDs; // IDs (zero-based array indices in m_node.m_model.m_data) of data samples in this bin
+  int m_numSamples;               // a convenience variable (DERIVED = m_sampleIDs.length())
   
-  color m_tileInRangeSelection = 0xFF880000;
-  color m_tileOutsideRangeSelection = 0xFFFFFFFF;
-  color m_tileBrushed = 0xFF000088;
-  color m_tileStrokeColor = 0xFF909090;
-  color[] m_tileBrushedNearMiss;
+  int m_sNumBrushes = 3; // the number of different brush colors to show
+
+  // color definitions
+  color m_strokeColor = 0xFF000000;
+  color m_focalInRangeSelFillColor = 0xFF880000;
+  color m_focalOutsideRangeSelFillColor = 0xFFFFFFFF;
+  color m_nonFocalNonBrushedFillColor = 0xFFFFFFFF;
+  //color m_binBackgroundColor = 
+  color[] m_brushColors;
   
-  ArrayList<Integer> m_tilesPerCol;         // records number of tiles in each column
-  ArrayList<Integer> m_brushedTilesPerCol;  // records number of brushed tiles per column (exact matches)
-  ArrayList<ArrayList<Integer>> m_brushedTilesNearMissPerCol; // records number of brushed tiles (near misses) per col
+  int[] m_numBrushedSamples; // records number of brush samples in bin, where index is number of 
+                             // near misses. So idx 0 is samples that exactly match selected range
+                             // idx 1 is samples with one near miss, etc.
                                                               // [
   int m_x; // x pos of bottom-left corner of bin, relative to left edge of histogram window
   int m_y; // y pos of bottom-left corner of bin, relative to top edge of histogram window
+  int m_w; // width of bin
+  int m_h; // height of bin
   
   HistogramBin(Node node, int idx, int numSamples, ArrayList<Integer> sampleIDs, int x, int y) {
     m_node = node;
     m_idx = idx;
     m_sampleIDs = sampleIDs;
-    m_tilesPerCol = new ArrayList<Integer>();
-    m_brushedTilesPerCol = new ArrayList<Integer>();
-    
-    m_brushedTilesNearMissPerCol = new ArrayList<ArrayList<Integer>>();
-    m_tileBrushedNearMiss = new color[m_sMaxBrushNearMisses];
+    m_numSamples = sampleIDs.size();
+    m_brushColors = new color[m_sNumBrushes];
+    m_numBrushedSamples = new int[m_sNumBrushes];
 
-    for (int i=0; i<m_sMaxBrushNearMisses; i++) {
-      m_brushedTilesNearMissPerCol.add(new ArrayList<Integer>());
+    for (int i=0; i<m_sNumBrushes; i++) {
+      m_numBrushedSamples[i] = 0;
       switch (i) {
-      case 0:  m_tileBrushedNearMiss[i] = 0xFFB0E0B0; break; //FFE0B0B0; break; // brush color for one miss
-      case 1:  m_tileBrushedNearMiss[i] = 0xFFE0B0B0; break; //FF22BB22; break; // brush color for two misses
-      default: m_tileBrushedNearMiss[i] = 0xFFFFFFFF; break; // brush color for three or more misses
+        case 0:  m_brushColors[i] = 0xFF000088; break; // brush color for exact match
+        case 1:  m_brushColors[i] = 0xFFB0E0B0; break; // brush color for one misses
+        case 2:  m_brushColors[i] = 0xFFE0B0B0; break; // brush color for two misses
+        default: m_brushColors[i] = 0xFFFFFFFF; break; // brush color for three or more misses
       }
     }
     
     m_x = x;
     m_y = y;
-    int numTiles = ceil((float)numSamples / (float)m_sNumSamplesPerTile);
-    while (numTiles > 0) {
-      int colSize = min(numTiles, m_sMaxTileStack);
-      m_tilesPerCol.add(colSize);
-      m_brushedTilesPerCol.add(0);
-      for (int i=0; i<m_sMaxBrushNearMisses; i++) {
-        m_brushedTilesNearMissPerCol.get(i).add(0);
+    setBinDimensions(); // set m_w and m_h according to visualisation mode
+  }
+  
+  
+  void setBinDimensions() {
+    int dh = m_node.m_hgDefaultMaxBinH;
+    int dw = m_node.m_hgDefaultBinW;
+    //int bhs = m_node.m_model.m_sStandardHistBinSampleHeight;
+    
+    switch (m_node.m_model.m_visualisationMode) {
+      case FullAutoHeightAdjust: {
+        m_h = (int)(0.01*(float)(dh * m_numSamples));  // TO DO.. sort out some proper scaling factor
+        m_w = dw;
+        // TO DO: need to potentially adjust m_node.m_hgH, plus adjust positions of other nodes
+        break;
       }
-      numTiles -= colSize;
-    }    
-    equaliseCols();
+      case Scaled: {
+        int maxs = m_node.getMaxSamplesPerBin();
+        m_h = (dh * m_numSamples) / maxs;
+        m_w = dw;
+        break;
+      }
+      case FullAreaConserved:
+      default: {
+        // TO DO...
+        break;
+      }
+    }
   }
   
   
-  int numCols() {
-    return m_tilesPerCol.size();
+  void setY(int y) {
+    m_y = y;
   }
   
   
-  int getLColLX() {
-    // return the x pos of the left hand side of the leftmost column
+  int getH() {
+    return m_h;
+  }
+  
+  
+  int getW() {
+    return m_w;
+  }
+  
+  
+  int getLX() {
+    // return the x pos of the left hand side of the bin
     return m_x;
   }
   
   
-  int getRColLX() {
-    // return the x pos of the left hand side of the rightmost column
-    if (m_tilesPerCol.isEmpty()) {
-      return m_x;
-    }
-    else {
-      return m_x + (m_tilesPerCol.size()-1)*m_sTileDim;
-    }
+  int getRX() {
+    // return the x pos of the right hand side of the bin
+    return m_x + m_w;
   }
   
-  
-  int getRColRX() {
-    // return the x pos of the right hand side of the rightmost column
-    if (m_tilesPerCol.isEmpty()) {
-      return m_x;
-    }
-    else {
-      return m_x + (m_tilesPerCol.size())*m_sTileDim;
-    }
-  }  
-  
-  
+   
   void draw() {
+    pushStyle();
     switch (m_node.m_model.m_visualisationMode) {
     case FullAutoHeightAdjust: {
       drawFullAutoHeightAdjust();
@@ -111,87 +121,85 @@ class HistogramBin {
       drawFullAreaConserved();
     }
     }
+    popStyle();
   }
   
   
   void drawFullAutoHeightAdjust() {
-    stroke(m_tileStrokeColor);
-
-    int x = m_x;
-    int c = 0;
-    for (Integer numTiles : m_tilesPerCol) {
-      int y = m_y;
-      for (int i=0; i<numTiles; i++) {
-        //println(numTiles+", "+i+", "+x+" "+y+", "+m_sTileDim);
-        
-        switch (m_node.m_model.m_interactionMode) {
-          case SingleNodeBrushing: {
-            if (m_node.m_bHasFocus) {
-              if (inSelectedRange()) {
-                fill(m_tileInRangeSelection);
-              }
-              else {
-                fill(m_tileOutsideRangeSelection);
-              }
-            }
-            else {
-              if (i < m_brushedTilesPerCol.get(c)) {
-                fill(m_tileBrushed);
-              }
-              else {
-                fill(m_tileOutsideRangeSelection);
-              }
-            }
-            break;
-          }          
-          case MultiNodeBrushing: {
-            if (m_node.m_bHasFocus) {
-              if (inSelectedRange()) {
-                fill(m_tileInRangeSelection);
-              }
-              else {
-                fill(m_tileOutsideRangeSelection);
-              }
-            }
-            else {
-              if (i < m_brushedTilesPerCol.get(c)) {
-                fill(m_tileBrushed);
-              }
-              else if (i < m_brushedTilesPerCol.get(c) + m_brushedTilesNearMissPerCol.get(0).get(c)) {
-                fill(m_tileBrushedNearMiss[0]);
-              }
-              else if (i < m_brushedTilesPerCol.get(c) + m_brushedTilesNearMissPerCol.get(0).get(c) +
-                       m_brushedTilesNearMissPerCol.get(1).get(c)) {
-                fill(m_tileBrushedNearMiss[1]);
-              }
-              else if (i < m_brushedTilesPerCol.get(c) + m_brushedTilesNearMissPerCol.get(0).get(c) +
-                       m_brushedTilesNearMissPerCol.get(1).get(c) + m_brushedTilesNearMissPerCol.get(2).get(c)) {
-                fill(m_tileBrushedNearMiss[2]);
-              }
-              else {
-                fill(m_tileOutsideRangeSelection);
-              }
-            }
-            break;
-          }
-          case Unassigned:
-          default: {
+    // draw the bin
+    if (m_h > 0) {
+      stroke(m_strokeColor);
+      
+      switch (m_node.m_model.m_interactionMode) {
+        case SingleNodeBrushing: 
+        case MultiNodeBrushing: {
+          if (m_node.m_bHasFocus) {
+            // this is the focal node for single-node brushing
             if (inSelectedRange()) {
-              fill(m_tileInRangeSelection);
+              fill(m_focalInRangeSelFillColor);
             }
             else {
-              fill(m_tileOutsideRangeSelection);
+              fill(m_focalOutsideRangeSelFillColor);
             }
-            break;
+            rect(m_x, m_y-m_h, m_w, m_h);
           }
+          else {
+            // this is a non-focal node for single-node brushing
+            drawBrushedBin((m_node.m_model.m_interactionMode == InteractionMode.SingleNodeBrushing) ? 1 : m_sNumBrushes);
+          }
+          break;
         }
-
-        rect(x, y-m_sTileDim, m_sTileDim, m_sTileDim);
-        y -= m_sTileDim;
+        case Unassigned:
+        default: {
+          println("Unexpected case found in HistogramBin::drawFullAutoHeightAdjust!");
+          exit();
+        }
       }
-      x += m_sTileDim;
-      c++;
-    }    
+    }
+    
+    // draw the base under each bin
+    stroke(m_node.m_hgBaseColor);
+    int baseY = m_y + (m_node.m_hgFootH / 2);
+    line(m_x, baseY, m_x+m_w, baseY);
+  }
+  
+  
+  void drawBrushedBin(int numBrushes) {
+    // helper method for drawing
+    // draws the various sections of an individual bin according to the current brushing of the bin
+    
+    int cumH = 0; // cumulative count of height of brushes considered so far 
+    int cumB = 0; // cumulative count of total number of brushed samples
+    
+    for (int b=0; b<numBrushes; b++) {
+      float brushFrac = (float)m_numBrushedSamples[b] / (float)m_numSamples;
+      int brushH = round(brushFrac*(float)m_h);
+      cumB += m_numBrushedSamples[b];
+      
+      // add brush height to cumulative total, but check we don't overshoot or undershoot the
+      // max total height of the bin because of rounding errors 
+      if (cumH + brushH > m_h) {
+        brushH = m_h - cumH;
+        cumH = m_h;
+      }
+      else if (cumB == m_numSamples) {
+        brushH = m_h - cumH;
+        cumH = m_h;
+      }
+      else {
+        cumH += brushH;
+      }
+
+      // draw brushed section
+      if (brushH > 0) {
+        fill(m_brushColors[b]);
+        rect(m_x, m_y-cumH, m_w, brushH);
+      }
+    }
+
+    // draw unbrushed section
+    fill(m_nonFocalNonBrushedFillColor);
+    rect(m_x, m_y-m_h, m_w, m_h-cumH);
   }
   
   
@@ -204,7 +212,7 @@ class HistogramBin {
     // TO DO...
   }
   
-  
+  /*
   void equaliseCols() {
     // balance the height of each column in this histogram bin
     int nCols = m_tilesPerCol.size();
@@ -221,7 +229,7 @@ class HistogramBin {
       m_tilesPerCol.set(nCols-1, m_tilesPerCol.get(nCols-1)+(d1*(nCols-1)));
     }
   }
-  
+  */
   
   boolean inSelectedRange() {
     // is this bin within the range currently selected by the Range Selector slider?
@@ -230,10 +238,9 @@ class HistogramBin {
   
   
   void brushSamples(ArrayList<Integer> samples) {
-    // highlight a fraction of the tiles in this bin according to how many
-    // of this bin's samples are in the selected set passed into this method
-    
-    //println("Brushing node "+m_node.m_name+" sampleIDs.size="+m_sampleIDs.size()+", samples.size="+samples.size());
+    // For single-node brushing
+    // Calculate which of the samples passed in are members of this bin, and record that number
+    // in m_numBrushedSamples[0]
     
     ArrayList<Integer> smallList;
     ArrayList<Integer> bigList;
@@ -255,16 +262,18 @@ class HistogramBin {
       }
     }
     
-    float matchFrac = (float)matches / (float)m_sampleIDs.size();
-    int numTiles = ceil((((float)m_sampleIDs.size()) * matchFrac) / (float)m_sNumSamplesPerTile);
-    int nCols = m_tilesPerCol.size();
-    int nTilesPerCol = ceil((float)numTiles / (float)nCols);
-    //println("matchFrac="+matchFrac+", numTiles="+numTiles+", nCols="+nCols+", nTilesPerCol="+nTilesPerCol);
+    m_numBrushedSamples[0] = matches;
     
-    brushTiles(numTiles);
+    //float matchFrac = (float)matches / (float)m_sampleIDs.size();
+    //int numTiles = ceil((((float)m_sampleIDs.size()) * matchFrac) / (float)m_sNumSamplesPerTile);
+    //int nCols = m_tilesPerCol.size();
+    //int nTilesPerCol = ceil((float)numTiles / (float)nCols);
+    //println("matchFrac="+matchFrac+", numTiles="+numTiles+", nCols="+nCols+", nTilesPerCol="+nTilesPerCol);
+    //brushTiles(0, numTiles);
   }
   
   
+  /*
   void brushTiles(int numTiles) {
     int tilesLeft = numTiles;
     for (int i=0; i<m_brushedTilesPerCol.size(); i++) {
@@ -273,24 +282,34 @@ class HistogramBin {
       tilesLeft -= numBrushed;
     }    
   }
+  */
   
-  void brushTilesNearMiss(int numMisses, int numTiles) {
-    assert(numMisses > 0);
+  
+  /*
+  void brushTiles(int numMisses, int numTiles) {
+    //
+    // brush the specified number of tiles in this bin, distributed over the various columns
+    // in the bin if necessary
+    assert(numMisses >= 0);
     if (numMisses <= m_sMaxBrushNearMisses) {
       int tilesLeft = numTiles;
-      for (int i=0; i<m_brushedTilesNearMissPerCol.get(numMisses-1).size(); i++) {
+      for (int i=0; i<m_brushedTilesPerCol.get(numMisses).size(); i++) {
         int numBrushed = min(tilesLeft, m_tilesPerCol.get(i));
-        m_brushedTilesNearMissPerCol.get(numMisses-1).set(i, numBrushed);
+        m_brushedTilesPerCol.get(numMisses).set(i, numBrushed);
         tilesLeft -= numBrushed;
       }
     }
-  }  
+    //
+  }
+  */  
   
   
   int numSamples() {
     return m_sampleIDs.size();
   }
   
+  
+  /*
   int numTilesBrushed() {
     int n = 0;
     for (int i=0; i<m_brushedTilesPerCol.size(); i++) {
@@ -298,20 +317,26 @@ class HistogramBin {
     }     
     return n;
   }
+  */
 
 
-  int numTilesBrushedNearMiss(int numMisses) {
-    assert(numMisses > 0);
+  int numTilesBrushed(int numMisses) {
+    /*
+    assert(numMisses >= 0);
     int n = 0;
     if (numMisses <= m_sMaxBrushNearMisses) {
-      for (int i=0; i<m_brushedTilesNearMissPerCol.get(numMisses-1).size(); i++) {
-        n += m_brushedTilesNearMissPerCol.get(numMisses-1).get(i);
+      for (int i=0; i<m_brushedTilesPerCol.get(numMisses).size(); i++) {
+        n += m_brushedTilesPerCol.get(numMisses).get(i);
       }
     }
     return n;
+    */
+    return 0;
   }  
   
   
+  ///
+  /*
   void brushSample(int sampleID) {
    
     resetBrushing();
@@ -333,33 +358,45 @@ class HistogramBin {
         m_brushedTilesPerCol.set(i, numBrushed);
         tilesLeft -= numBrushed;
       }
-      */
+      * /
     
     }
   }
+  */
   
   
+  /*
   void brushSampleAdd(int sampleID) {
     if (m_sampleIDs.contains(sampleID)) {
       brushTiles(numTilesBrushed() + 1);
     }
-  }  
+  }
+ */ 
 
 
-  void brushSampleAddNearMiss(int sampleID, int numMisses) {
+  void brushSampleAdd(int sampleID, int numMisses) {
+    // If the sample passed in is in this bin, increment the relevant count of brushed tiles
+    assert((numMisses >= 0) && (numMisses < m_sNumBrushes));
+    
     if (m_sampleIDs.contains(sampleID)) {
-      brushTilesNearMiss(numMisses, numTilesBrushedNearMiss(numMisses) + 1);
+      //brushTiles(numMisses, numTilesBrushed(numMisses) + 1);
+      m_numBrushedSamples[numMisses]++;
     }
   }   
   
   
   void resetBrushing() {
+    /*
     for (int i=0; i<m_brushedTilesPerCol.size(); i++) {
-      m_brushedTilesPerCol.set(i, 0);
-      for (int j=0; j<m_brushedTilesNearMissPerCol.size(); j++) {
-        m_brushedTilesNearMissPerCol.get(j).set(i,0);
+      ///m_brushedTilesPerCol.set(i, 0);
+      for (int j=0; j<m_brushedTilesPerCol.size(); j++) {
+        m_brushedTilesPerCol.get(j).set(i,0);
       }
-    }    
+    }
+    */   
+    for (int i=0; i<m_sNumBrushes; i++) {
+      m_numBrushedSamples[i] = 0;
+    }
   }
   
   boolean sampleInBin(int sampleID) {

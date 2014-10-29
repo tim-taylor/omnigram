@@ -7,18 +7,20 @@ public abstract class Node {
   // Widget appearance and position
   int m_sNodeW = 330;   // width of Node widget, same for all nodes 
   int m_sNodeH = 200;   // height of Node widget, same for all nodes
-  //int m_sNodeH = 450;   // height of Node widget, same for all nodes 
   int m_x;              // x position of top-left corner
   int m_y;              // y position of top-left corner
   int m_nodeZoom = 100;
-  
-  protected int m_mbH = 25;  // menu bar height
-  protected int m_hgH;       // histogram height (= m_sNodeH - m_mbH - m_rsH - m_lbH)
-  protected int m_rsH = 25;  // range selector height
-  protected int m_lbH = 25;  // label bar height
+    
+  protected int m_mbH = 25;      // menu bar height
+  protected int m_hgH;           // histogram height (DERIVED = m_sNodeH - m_mbH - m_rsH - m_lbH)
+  protected int m_hgHeadH = 5;   // histogram header height (for drawing bin base lines): this is part of m_hgH
+  protected int m_hgFootH = 5;   // histogram footer height (for drawing bin base lines): this is part of m_hgH
+  protected int m_rsH = 25;      // range selector height
+  protected int m_lbH = 25;      // label bar height
   
   color m_mbBackgroundColor;
   color m_hgBackgroundColor;
+  color m_hgBaseColor;
   color m_rsBackgroundColor;
   color m_rsHandleColor;
   color m_rsHandlePressedColor;
@@ -44,13 +46,17 @@ public abstract class Node {
   // Histogram 
   int m_sMaxBins = 20;
   int m_hgNumBins;
-  int[] m_hgBinSampleCounts;      // stores number of samples in each bin
+  int[] m_hgBinSampleCounts;        // stores number of samples in each bin
   ArrayList<HistogramBin> m_hgBins;
-  ArrayList<Number> m_hgBinMinVals;
+  ArrayList<Number> m_hgBinMinVals; // stores the min limit of range stored in each bin
   int m_hgMinInterBinGap = 8;
+  int m_hgMaxInterBinGap = 15;
+  int m_hgDefaultMaxBinH;  // max allowed bin height (for all but FullAutoHeightAdjust) (DERIVED = m_hgH-m_hgHeadH-m_hgFootH)
+  int m_hgDefaultBinW = 8; // standard bin width (for all but FullAreaConserved)
+  //int m_sStandardHistBinSampleHeight = 1;  
   
   // Range Selector
-  int m_rsHandleW = 8;
+  //int m_rsHandleW = 8;
   int m_rsLow = 0;   // the (0-based) index in m_hgBins of the lowest selected histogram bin
   int m_rsHigh = 0;  // the (0-based) index in m_hgBins of the highest selected histogram bin
   
@@ -74,12 +80,12 @@ public abstract class Node {
     m_dataCol = filecol;
     m_parentIDs = parentIDs;
     m_hgNumBins = 10;
-    m_hgBins = new ArrayList<HistogramBin>(); 
-    m_x = (int)random(0, width - m_sNodeW);
-    m_y = (int)random(0, height - m_sNodeH);
+    m_hgBins = new ArrayList<HistogramBin>();
     m_hgH = m_sNodeH - m_mbH - m_rsH - m_lbH;
+    m_hgDefaultMaxBinH = m_hgH - m_hgHeadH - m_hgFootH; 
     m_mbBackgroundColor    = #E0E0E0;
     m_hgBackgroundColor    = #FFFFFF;
+    m_hgBaseColor          = #000000;
     m_rsBackgroundColor    = #999999;
     m_rsHandleColor        = #BBDDDD;
     m_rsHandlePressedColor = #DDFFFF;
@@ -95,10 +101,24 @@ public abstract class Node {
     m_mousePressY = 0;
     m_rsMousePressLLDeltaX = 0;
     m_rsMousePressRRDeltaX = 0;
+    m_x = (int)random(0, width - m_sNodeW);
+    m_y = (int)random(0, height - m_sNodeH);
   }
   
+  
+  int getH() {
+    // returns the full height of the node
+    return (m_mbH + m_hgH + m_rsH + m_lbH);
+  }
+
+
   void setPosition(int x, int y) {
     m_x = x;
+    m_y = y;
+  }
+  
+  
+  void setY(int y) {
     m_y = y;
   }
 
@@ -124,16 +144,48 @@ public abstract class Node {
       m_hgBinSampleCounts[idx]++;
       sampleIDs.get(idx).add(rowNum);
       rowNum++;
-    }    
+    }
+
+    m_rsHigh = m_hgNumBins-1;
     
-    int binx = 0;
+    int gap = (int)((float)(m_sNodeW - (m_hgNumBins * m_hgDefaultBinW)) / (float)(m_hgNumBins + 1)); 
+    gap = constrain(gap, m_hgMinInterBinGap, m_hgMaxInterBinGap);
+    //int binx = (m_sNodeW - (m_hgNumBins * m_sStandardHistBinWidth) - ((m_hgNumBins-1) * gap)) / 2;
+    int binx = gap;
+    int maxH = 0;
+    
+    //println("Node: "+m_name);
     for (int i=0; i<m_hgNumBins; i++) {
-      HistogramBin bin = new HistogramBin(this, m_hgBins.size(), m_hgBinSampleCounts[i], sampleIDs.get(i), binx, m_hgH);
+      HistogramBin bin = new HistogramBin(this, m_hgBins.size(), m_hgBinSampleCounts[i], sampleIDs.get(i), binx, m_hgH - m_hgFootH);
+      //println(" bin "+i+", x="+binx+", gap="+gap+", m_w="+bin.m_w);
       m_hgBins.add(bin);
-      binx += (max(bin.numCols(), 1) * bin.m_sTileDim) + m_hgMinInterBinGap;
+      maxH = max(maxH, bin.getH());
+      binx += bin.m_w + gap;
     }
     
-    m_rsHigh = m_hgNumBins-1;    
+    // reset width of node according to space taken up by the bins
+    m_sNodeW = binx;
+    
+    // if the max bin height is greater than the height allowed by the node, heighten node to fit
+    int newH = m_mbH + m_rsH + m_lbH + m_hgHeadH + maxH + m_hgFootH;
+    if (newH > m_sNodeH) {
+      m_sNodeH = newH;
+      m_hgH = m_sNodeH - m_mbH - m_rsH - m_lbH;
+      for (HistogramBin bin : m_hgBins) {
+        bin.setY(m_hgH - m_hgFootH);
+      }      
+    }
+  }
+  
+  
+  int getMaxSamplesPerBin() {
+    int max = 0;
+    for (HistogramBin bin : m_hgBins) {
+      if (bin.m_numSamples > max) {
+        max = bin.m_numSamples;
+      }
+    }  
+    return max;
   }
 
 
@@ -188,14 +240,19 @@ public abstract class Node {
     rect(0, 0, m_sNodeW, m_rsH);
 
     if (m_hgBins != null) {
-      int lx = m_hgBins.get(m_rsLow).getLColLX();
-      int rx = m_hgBins.get(m_rsHigh).getRColLX();
+      int llx = m_hgBins.get(m_rsLow).getLX();
+      int lrx = m_hgBins.get(m_rsLow).getRX();
+      int hlx = m_hgBins.get(m_rsHigh).getLX();
+      int hrx = m_hgBins.get(m_rsHigh).getRX();
+      // draw range bar
       fill(m_rsSelectedRangeColor);
-      rect(lx, 0, rx-lx, m_rsH);
+      rect(lrx, 0, hlx-lrx, m_rsH);
+      // draw left handle
       fill(m_rsLeftHandlePressed ? m_rsHandlePressedColor : m_rsHandleColor);
-      rect(lx, 0, m_rsHandleW, m_rsH);
+      rect(llx, 0, lrx-llx, m_rsH);
+      // draw right handle
       fill(m_rsRightHandlePressed ? m_rsHandlePressedColor : m_rsHandleColor);
-      rect(rx, 0, m_rsHandleW, m_rsH);
+      rect(hlx, 0, hrx-hlx, m_rsH);
     }
     
     popMatrix();
@@ -229,7 +286,11 @@ public abstract class Node {
     if (scaledMouseX() >= m_x && scaledMouseX() < m_x + m_sNodeW && scaledMouseY() >= m_y && scaledMouseY() <= m_y + m_sNodeH) {
       // the mouse has been pressed within this node, so figure out what we need to do about it!
       
-      if (scaledMouseY() >= m_y + m_mbH && scaledMouseY() < m_y + m_mbH + m_hgH) {
+      if (scaledMouseY() < m_y + m_mbH) {
+        ///////////// MOUSE IS IN THE MENU BAR AREA ///////////////////////////////////////////////
+        m_bNodeDragged = true;        
+      }
+      else if (scaledMouseY() >= m_y + m_mbH && scaledMouseY() < m_y + m_mbH + m_hgH) {
         ///////////// MOUSE IS IN THE HISTOGRAM AREA ///////////////////////////////////////////////
         
         switch (m_model.m_interactionMode) {
@@ -260,13 +321,14 @@ public abstract class Node {
         ///////////// MOUSE IS IN THE RANGE SELECTOR AREA //////////////////////////////////////////
         
         if (rangeSelectorActive()) {
-          int llx = m_hgBins.get(m_rsLow).getLColLX();
-          int rlx = m_hgBins.get(m_rsHigh).getRColLX();
-          int rrx = m_hgBins.get(m_rsHigh).getRColRX();
+          int llx = m_hgBins.get(m_rsLow).getLX();
+          int lrx = m_hgBins.get(m_rsLow).getRX();
+          int hlx = m_hgBins.get(m_rsHigh).getLX();
+          int hrx = m_hgBins.get(m_rsHigh).getRX();
           
           if (m_rsLow == m_rsHigh) {
             // first deal with special case where both range selectors are in the same position
-            if (scaledMouseX() >= m_x + llx && scaledMouseX() <= m_x + llx + m_rsHandleW) {
+            if (scaledMouseX() >= m_x + llx && scaledMouseX() <= m_x + lrx) {
               if (scaledMouseY() <= (m_y + m_mbH + m_hgH + (m_rsH/2))) {
                 // is top half of handle pressed, call it a right handle press
                 m_rsRightHandlePressed = true;
@@ -278,19 +340,19 @@ public abstract class Node {
             }
           }
           else {
-            if (scaledMouseX() >= m_x + llx && scaledMouseX() <= m_x + llx + m_rsHandleW) {
+            if (scaledMouseX() >= m_x + llx && scaledMouseX() <= m_x + lrx) {
               // left handle pressed
               m_rsLeftHandlePressed = true;
             }
-            else if (scaledMouseX() >= m_x + rlx && scaledMouseX() <= m_x + rlx + m_rsHandleW) {
+            else if (scaledMouseX() >= m_x + hlx && scaledMouseX() <= m_x + hrx) {
               // right handle pressed
               m_rsRightHandlePressed = true;
             }
-            else if (scaledMouseX() > m_x + llx + m_rsHandleW && scaledMouseX() < m_x + rlx) {
+            else if (scaledMouseX() > m_x + lrx && scaledMouseX() < m_x + hlx) {
               // bin between the handles pressed
               m_rsBarPressed = true;
               m_rsMousePressLLDeltaX = m_mousePressX - (m_x + llx);
-              m_rsMousePressRRDeltaX = (m_x + rrx) - m_mousePressX;
+              m_rsMousePressRRDeltaX = (m_x + hrx) - m_mousePressX;
             }
           }
         }
@@ -326,14 +388,14 @@ public abstract class Node {
     }
     else if (m_rsLeftHandlePressed) {
       ///////////// RANGE SELECTOR LEFT HANDLE DRAGGED /////////////////////////////////
-      int llx = m_hgBins.get(m_rsLow).getLColLX();
-      int rrx = m_hgBins.get(m_rsLow).getRColRX();    
+      int llx = m_hgBins.get(m_rsLow).getLX();
+      int rrx = m_hgBins.get(m_rsLow).getRX();    
       if (scaledMouseX() < m_x) {
         m_rsLow = 0;
       }
       else if ((scaledMouseX() < m_x + llx) && (m_rsLow > 0)) {
         for (int i = m_rsLow-1; i >= 0; i--) {
-          if (scaledMouseX() < m_x + m_hgBins.get(i).getRColRX()) {
+          if (scaledMouseX() < m_x + m_hgBins.get(i).getRX()) {
             m_rsLow = i;
           }
           else {
@@ -343,7 +405,7 @@ public abstract class Node {
       }
       else if ((scaledMouseX() > m_x + rrx) && (m_rsLow < m_rsHigh)) {
         for (int i = m_rsLow+1; i <= m_rsHigh; i++) {
-          if (scaledMouseX() > m_x + m_hgBins.get(i).getLColLX()) {
+          if (scaledMouseX() > m_x + m_hgBins.get(i).getLX()) {
             m_rsLow = i;
           }
           else {
@@ -354,14 +416,14 @@ public abstract class Node {
     }
     else if (m_rsRightHandlePressed) {
       ///////////// RANGE SELECTOR RIGHT HANDLE DRAGGED ////////////////////////////////
-      int llx = m_hgBins.get(m_rsHigh).getLColLX();
-      int rrx = m_hgBins.get(m_rsHigh).getRColRX();    
+      int llx = m_hgBins.get(m_rsHigh).getLX();
+      int rrx = m_hgBins.get(m_rsHigh).getRX();    
       if (scaledMouseX() < m_x) {
         m_rsHigh = m_rsLow;
       }
       else if ((scaledMouseX() < m_x + llx) && (m_rsHigh > m_rsLow)) {
         for (int i = m_rsHigh-1; i >= m_rsLow; i--) {
-          if (scaledMouseX() < m_x + m_hgBins.get(i).getRColRX()) {
+          if (scaledMouseX() < m_x + m_hgBins.get(i).getRX()) {
             m_rsHigh = i;
           }
           else {
@@ -371,7 +433,7 @@ public abstract class Node {
       }
       else if ((scaledMouseX() > m_x + rrx) && (m_rsHigh < m_hgNumBins-1)) {
         for (int i = m_rsHigh+1; i <= m_hgNumBins-1; i++) {
-          if (scaledMouseX() > m_x + m_hgBins.get(i).getLColLX()) {
+          if (scaledMouseX() > m_x + m_hgBins.get(i).getLX()) {
             m_rsHigh = i;
           }
           else {
@@ -382,8 +444,8 @@ public abstract class Node {
     }
     else if (m_rsBarPressed) {
       ///////////// RANGE SELECTOR BAR BETWEEN HANDLES DRAGGED /////////////////////////
-      int llx = m_hgBins.get(m_rsLow).getLColLX();
-      int rrx = m_hgBins.get(m_rsLow).getRColRX(); 
+      int llx = m_hgBins.get(m_rsLow).getLX();
+      int rrx = m_hgBins.get(m_rsLow).getRX(); 
       if (scaledMouseX() < m_x) {
         // moving to extreme left
         m_rsHigh -= m_rsLow;
@@ -392,7 +454,7 @@ public abstract class Node {
       else if ((scaledMouseX() < scaledPMouseX()) && (m_rsLow > 0)) {
         // moving left
         for (int i = m_rsLow; i >= 0; i--) {
-          if ((scaledMouseX() - m_rsMousePressLLDeltaX) < (m_x + m_hgBins.get(i).getRColRX())) {
+          if ((scaledMouseX() - m_rsMousePressLLDeltaX) < (m_x + m_hgBins.get(i).getRX())) {
             m_rsHigh -= (m_rsLow-i);
             m_rsLow = i;
           }
@@ -404,7 +466,7 @@ public abstract class Node {
       else if ((scaledMouseX() > scaledPMouseX()) && (m_rsHigh < m_hgNumBins-1)) {
         // moving right
         for (int i = m_rsHigh+1; i <= m_hgNumBins-1; i++) {
-          if (scaledMouseX() + m_rsMousePressRRDeltaX > m_x + m_hgBins.get(i).getLColLX()) {
+          if (scaledMouseX() + m_rsMousePressRRDeltaX > m_x + m_hgBins.get(i).getLX()) {
             m_rsLow += (i-m_rsHigh);
             m_rsHigh = i;
           }
@@ -446,23 +508,27 @@ public abstract class Node {
   }
   
   
+  /*
   void brushSample(int sampleID) {
     for (HistogramBin bin : m_hgBins) {
       bin.brushSample(sampleID);
     }
   }
+  */
   
   
+  /*
   void brushSampleAdd(int sampleID) {
     for (HistogramBin bin : m_hgBins) {
       bin.brushSampleAdd(sampleID);
     }
-  }  
+  }
+ */ 
 
 
-  void brushSampleAddNearMiss(int sampleID, int numMisses) {
+  void brushSampleAdd(int sampleID, int numMisses) {
     for (HistogramBin bin : m_hgBins) {
-      bin.brushSampleAddNearMiss(sampleID, numMisses);
+      bin.brushSampleAdd(sampleID, numMisses);
     }
   } 
   
@@ -511,160 +577,5 @@ public abstract class Node {
     return (int)((float)(pmouseY * 100.0) / m_model.m_globalZoom);
   }
 
-  //////////// LEGACY STUFF //////////////////////////////
-  
-  //boolean m_bShowExtra;
-  
-  /*
-  Dial() {
-    setDefaults();
-  }
-  
-  Dial(int x, int y, int d) {
-    setDefaults();
-    m_x = x;
-    m_y = y;
-    m_dim = d; 
-  }
-  
-  Dial(int x, int y, int d, Data data, DataField datafield, ControlP5 c) {
-    setDefaults();
-    m_x = x;
-    m_y = y;
-    m_dim = d;
-    m_data = data;
-    m_datafield = datafield;
-
-    m_range = c.addRange(m_datafield.m_description)
-             // disable broadcasting since setRange and setRangeValues will trigger an event
-             .setBroadcast(false) 
-             .setPosition(m_x, m_y)
-             .setSize(m_dim, m_dim/10)
-             .setHandleSize(m_dim/15)
-             //.setNumberOfTickMarks(8)
-             //.showTickMarks(true)
-             //.snapToTickMarks(true)
-             .setRange(m_dialMin, m_dialMax)          // sets max range on dial
-             .setRangeValues(m_dialLow, m_dialHigh)   // sets current range on dial
-             .setCaptionLabel("")
-             // after the initialization we turn broadcast back on again
-             .setBroadcast(true)
-             //.setColorForeground(color(255,40))
-             //.setColorBackground(color(255,40))
-             .setColorForeground(color(255,80))
-             .setColorBackground(color(200,40)) 
-             ;    
-  }
-  
-  void setRange(float min, float max) {
-    m_dialMin = (int)min;
-    m_dialMax = (int)max;
-    m_dialLow = m_dialMin;
-    m_dialHigh = m_dialMax;
-    m_range.setBroadcast(false);
-    m_range.setRange(m_dialMin, m_dialMax);
-    m_range.setRangeValues(m_dialLow, m_dialHigh);
-    m_range.setBroadcast(true);
-  }
-  
-  void initialiseTicks(int numTicks, boolean snapToTicks) {
-    m_range.setBroadcast(false);
-    m_range.setNumberOfTickMarks(numTicks);
-    m_range.snapToTickMarks(snapToTicks);
-    m_range.showTickMarks(numTicks <= 20);
-    m_range.setDecimalPrecision(0);
-    m_range.setBroadcast(true);
-  }
-  
-  void setRangeAndTicksFromData() {
-    if (m_datafield.isFloat()) {
-      setRange(m_datafield.fMin(), m_datafield.fMax());
-    }
-    else if (m_datafield.isInt()) {
-      setRange(m_datafield.iMin(), m_datafield.iMax());
-      initialiseTicks(m_datafield.iRange(), true);
-    }
-  }
-  
-  void setDefaults() {
-    m_x = 50;
-    m_y = 50;
-    m_dim = 200;
-    m_dialMin = 0;
-    m_dialMax = 100;
-    m_dialLow = 0;
-    m_dialHigh = 100;
-    m_bDragged = false;
-    m_bHasFocus = false;
-    m_widgetBackgroundColor = 0xFF151515; //0x20151515;
-    m_dialForegroundColor   = 0x65404040;
-    m_connectedInputDials = new ArrayList<InputDial>();
-    m_connectedOutputDials = new ArrayList<OutputDial>();
-    m_bShowExtra = false;
-  }
-  
-  void controlEvent(ControlEvent theControlEvent) {
-    if(theControlEvent.isFrom(m_datafield.m_description)) {
-      m_dialLow  = int(theControlEvent.getController().getArrayValue(0));
-      m_dialHigh = int(theControlEvent.getController().getArrayValue(1));
-    }
-  }
-  */
-
-  
-  /*
-  boolean hasFocus() {
-    return m_bHasFocus;
-  }
-  
-  boolean isConnectedOutput(OutputDial odial) {
-    for (OutputDial connection : m_connectedOutputDials) {
-      if (connection == odial) {
-        return true;
-      }
-    }
-    return false;
-  }
-  
-  boolean isConnectedInput(InputDial idial) {
-    for (InputDial connection : m_connectedInputDials) {
-      if (connection == idial) {
-        return true;
-      }
-    }
-    return false;
-  }
-  */
-  
-  
-  /*
-  boolean mousePressed(ArrayList<InputDial> allidials, ArrayList<OutputDial> allodials, boolean clearFocusIfNotTarget) {
-    /*
-    boolean dialPressed = false;
-    /*
-    int smx = (int)((float)mouseX / displayScale);
-    int smy = (int)((float)mouseY / displayScale);
-    if ((smx >= m_x) && 
-        (smx < m_x + m_dim) && 
-        (smy >= m_y + + (1*(m_dim/10))) &&
-        (smy <= m_y + m_dim + (2*(m_dim/10)))) {
-    * /
-    if ((mouseX >= m_x) && 
-        (mouseX < m_x + m_dim) && 
-        (mouseY >= m_y + + (1*(m_dim/10))) &&
-        (mouseY <= m_y + m_dim + (2*(m_dim/10)))) {    
-      m_bDragged = true;
-      m_bHasFocus = !m_bHasFocus;
-      dialPressed = true;
-    } else {
-      m_bDragged = false;
-      if (clearFocusIfNotTarget) {
-        m_bHasFocus = false;
-      }
-    }
-    return dialPressed;
-    * /
-  }
-  */
   
 }
