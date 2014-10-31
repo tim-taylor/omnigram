@@ -29,8 +29,6 @@ void setup() {
   
   model = new Model(modelLoaderFile);
   model.m_interactionMode = InteractionMode.SingleNodeBrushing;
-  //model.m_interactionMode = InteractionMode.MultiNodeBrushing;
-
 }
 
 

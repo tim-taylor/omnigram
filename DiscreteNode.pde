@@ -1,10 +1,10 @@
 public class DiscreteNode extends Node {
   
   // Range selector info
-  int m_rangeMin;      // min value selectable on dial
-  int m_rangeMax;      // max value selectable on dial
-  int m_rangeLow;      // current low point selected on dial
-  int m_rangeHigh;     // current high point selected on dial  
+  int m_rangeMin;      // min value selectable
+  int m_rangeMax;      // max value selectable
+  int m_rangeLow;      // current low point selected
+  int m_rangeHigh;     // current high point selected  
   
   
   DiscreteNode(Model model, int id, String name, int filecol, int min, int max, ArrayList<Integer> parentIDs) {
@@ -12,36 +12,21 @@ public class DiscreteNode extends Node {
     m_rangeMin = m_rangeLow = min;
     m_rangeMax = m_rangeHigh = max;
   }
+
   
   int getSelectedRange() {
     return m_rangeHigh - m_rangeLow + 1;
   }
 
+
   int getFullRange() {
     return m_rangeMax - m_rangeMin + 1;
   }
   
+  
   void initialiseHistogram() {
     int dataRange = getFullRange();
     m_hgNumBins = (dataRange > m_sMaxBins) ? m_sMaxBins : dataRange;
-    
-    /*
-    m_hgBins = new int[m_hgNumBins];
-    
-    ArrayList<ArrayList<Integer>> sampleIDs = new ArrayList<ArrayList<Integer>>();
-    for (int i=0; i < m_hgNumBins; i++) {
-      sampleIDs.add(new ArrayList<Integer>());
-    }
-    
-    int rowNum = 0;
-    for (ArrayList<Number> row : m_model.m_data) {
-      Number data = row.get(m_dataCol-1);
-      int idx = getHistogramIndex(data);
-      m_hgBins[idx]++;
-      sampleIDs.get(idx).add(rowNum);
-      rowNum++;
-    }
-    */
     
     println("Histogram boundary values for "+m_name);
     for (int i=0; i<m_hgNumBins; i++) {
@@ -51,15 +36,25 @@ public class DiscreteNode extends Node {
     initialiseHistogramCommon();
   }
   
+  
   int getHistogramIndex(Number num) {
+    // return the index in node.m_hgBins corresponding to the data value passed in (i.e. which
+    // bin does that value belong to)
     int iNum = num.intValue();
     return (((iNum - m_rangeMin) * m_hgNumBins) / (m_rangeMax - m_rangeMin + 1));
   }
+  
   
   Number getHistogramBinLowVal(int bin) {
     return new Integer((((bin*(m_rangeMax - m_rangeMin + 1))/m_hgNumBins) + m_rangeMin));
   }
   
+  
+  Number getHistogramBinHighVal(int bin) {
+    Integer high = new Integer((Integer)getHistogramBinLowVal(bin+1));
+    return (high - 1);
+  }
+
   
   /*
   InputDial(int x, int y, int d, Data data, DataField datafield, ControlP5 c) {

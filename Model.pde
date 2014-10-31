@@ -1,6 +1,6 @@
 public class Model {
 
-  ArrayList<ArrayList<Number>> m_data;
+  ArrayList<ArrayList<Number>> m_data; // holds the model's data, indexed by m_data.get(sampleID).get(node.m_dataArrayCol)
   ArrayList<String> m_dataLabels;
   
   // general data about the model
@@ -34,7 +34,8 @@ public class Model {
   boolean m_menuVisible = false;
   color   m_menuBackgroundColor = 0xFF000000;
   color   m_menuTextColor = 0xFFEEEE30;
-  color   m_windowBackgroundColor = 0xFF808080; //0xFF909090;
+  color   m_windowBackgroundColor = 0xFF808080;
+  PFont   m_smallFont;
   PFont   m_mediumFont;
   int     m_defaultInterNodeGapV = 20;
 
@@ -159,6 +160,7 @@ public class Model {
     m_allNodes = new ArrayList<Node>();
     m_allNodesSafe = false;
     m_modelDataLabelCol = 0;
+    m_smallFont = createFont("Arial", 11, true);
     m_mediumFont = createFont("Arial", 16, true);
   }
 
@@ -170,8 +172,8 @@ public class Model {
     int numNodes = m_allNodes.size();
     boolean[] colDiscrete = new boolean[numNodes];
     for (Node node : m_allNodes) {
-      assert(node.m_dataCol <= numNodes); // TODO: for now, assuming all cols have associated nodes, and cols labeled from 1 up
-      colDiscrete[node.m_dataCol-1] = (node instanceof DiscreteNode);
+      assert(node.m_dataArrayCol < numNodes); // TODO: for now, assuming all cols have associated nodes, and cols labeled from 1 up
+      colDiscrete[node.m_dataArrayCol] = (node instanceof DiscreteNode);
     }
     
     for (int i = 0 ; i < lines.length; i++) {
@@ -218,6 +220,8 @@ public class Model {
   
   
   void setSingleFocus(int nodeIdx) {
+    // in SingleNodeBrushing mode, set the indicated node to be the focus node, and
+    // remove focus from all other nodes
     checkAllNodesSafe();
     for (Node node : m_allNodes) {
       if (node.m_id == nodeIdx) {
@@ -231,11 +235,16 @@ public class Model {
   }
   
   
-  void setMultiFocus(int nodeIdx) {
+  void toggleMultiFocus(int nodeIdx) {
+    // in MultiNodeBrushing mode, toggle the focus flag of the indicated node
     checkAllNodesSafe();
     for (Node node : m_allNodes) {
       if (node.m_id == nodeIdx) {
-        node.m_bHasFocus = true;
+        node.m_bHasFocus = !node.m_bHasFocus;
+        if (!node.m_bHasFocus) {
+          node.setFullRange();
+        }
+        break;
       }
     }
   }  
@@ -285,7 +294,9 @@ public class Model {
   
   
   void brushAllNodesOnMultiSelection() {
-  
+    
+    // First build up a list of all nodes that currently have focus, and a list of all other nodes
+    
     ArrayList<Node> focalNodes = new ArrayList<Node>();
     ArrayList<Node> otherNodes = new ArrayList<Node>();
     
@@ -302,25 +313,23 @@ public class Model {
       onode.resetBrushing();
     }
 
-    int numBrushes = m_allNodes.get(0).m_hgBins.get(0).m_sNumBrushes; // oh dear, that's a bit ugly...
-    
+    // Now go through every sample in the data and check whether it lies within the selected range of values
+    // for each of the focal nodes (and if not, how many focal nodes it misses). Then brush the sample
+    // in all the other nodes according to the number of misses.
+
+    int numBrushes = m_allNodes.get(0).m_hgNumBrushes;
     int numSamplesAll = m_data.size();
+    
     for (int i=0; i<numSamplesAll; i++) {
       int numMisses = 0;
-      boolean sampleSelectedInAllFocal = true;
+      
       for (Node fnode : focalNodes) {
         if (!(fnode.sampleSelected(i))) {
-          sampleSelectedInAllFocal = false;
-          //break;
           numMisses++;
         }
       }
-      if (sampleSelectedInAllFocal) {
-        for (Node onode : otherNodes) {
-          onode.brushSampleAdd(i, 0);
-        }
-      }
-      else if ((numMisses > 0) && (numMisses < numBrushes)) {
+      
+      if (numMisses < numBrushes) {
         for (Node onode : otherNodes) {
           onode.brushSampleAdd(i, numMisses);
         }
