@@ -220,8 +220,16 @@ class HistogramBin {
   
   
   int numSamples() {
-    return m_sampleIDs.size();
+    return m_numSamples;
+    //return m_sampleIDs.size();
   }  
+  
+  
+  int numBrushed() {
+    // return the number of brushed samples (with no misses)
+    assert(m_numBrushedSamples[0] == m_brushedSampleIDs.size());
+    return m_numBrushedSamples[0];
+  }
   
   
   void brushSamples(ArrayList<Integer> samples) {
@@ -286,6 +294,7 @@ class HistogramBin {
   boolean sampleBrushed(int sampleID) {
     // returns true if the specified sample is brushed (numMisses==0) in this bin
 
+    /*
     // TO DO... THE FOLLOWING LINES ARE TEMP CODE...
     if (m_idx==1 && random(100) < 5) {
       int numS = m_numSamples;
@@ -293,6 +302,7 @@ class HistogramBin {
       boolean b = m_brushedSampleIDs.contains(sampleID);
       println(m_node.m_name+", bin "+m_idx+", numS="+numS+", numB="+numB+", sample "+sampleID+", brushed="+(b?"yes":"no"));
     }
+    */
     
     return m_brushedSampleIDs.contains(sampleID);    
   }  

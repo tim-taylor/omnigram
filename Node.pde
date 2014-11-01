@@ -287,6 +287,13 @@ public abstract class Node {
         int circ = (int)(0.5 * (float)m_rsH);
         fill(m_rsMeanValColor);
         ellipse(meanx, m_rsH/2, circ, circ);
+        
+        /*
+        // TO DO... TEMP DEBUGGING CODE
+        if (m_id==1) {
+          println(m_name+", meanv="+meanv+", lowv="+lowv+", highv="+highv+", lmx="+lmx+", hmx="+hmx+", meanx="+meanx);
+        }
+        */
       }
       
     }
@@ -625,7 +632,7 @@ public abstract class Node {
     int numSamples = 0;
     for (int b = m_rsLow; b <= m_rsHigh; b++) {
       total += m_hgBins.get(b).getTotalValues(brushedOnly);
-      numSamples += m_hgBins.get(b).numSamples();
+      numSamples += (brushedOnly ? m_hgBins.get(b).numBrushed() : m_hgBins.get(b).numSamples());
     }
     return total / (float)numSamples;
   }  
