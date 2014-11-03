@@ -69,6 +69,9 @@ public abstract class Node {
   ArrayList<Node> m_children;  
   ArrayList<Integer> m_parentIDs;
   
+  // Information about BrushLinks associated with this node
+  boolean m_brushLinkUnderConstruction; // flag to indicate if user is in process of constructing a new brush link on this node
+  
   // Abstract classes to be specialised in subclasses
   abstract int    getFullRange();
   abstract int    getSelectedRange();
@@ -110,23 +113,40 @@ public abstract class Node {
     m_rsMousePressRRDeltaX = 0;
     m_x = (int)random(0, width - m_sNodeW);
     m_y = (int)random(0, height - m_sNodeH);
+    m_brushLinkUnderConstruction = false;
   }
   
   
-  int getH() {
-    // returns the full height of the node
-    return (m_mbH + m_hgH + m_rsH + m_lbH);
-  }
-
-
   void setPosition(int x, int y) {
     m_x = x;
     m_y = y;
   }
-  
-  
+
+  void setX(int x) {
+    m_x = x;
+  }
+
+
   void setY(int y) {
     m_y = y;
+  }
+
+
+  int getH() {
+    // returns the full height of the node
+    return (m_mbH + m_hgH + m_rsH + m_lbH);
+  }
+  
+  
+  int getCentreX() {
+    // returns the x position of the centre of the node
+    return (m_x + (m_sNodeW / 2));
+  }
+
+
+  int getCentreY() {
+    // returns the y position of the centre of the node
+    return (m_y + (getH() / 2));
   }
 
   
@@ -201,6 +221,7 @@ public abstract class Node {
     m_nodeZoom = nodeZoom;
     
     pushMatrix();
+    pushStyle();
 
     scale(((float)m_model.m_globalZoom)/100.0);
     
@@ -210,9 +231,20 @@ public abstract class Node {
     drawHistogram();
     drawRangeSelector();
     drawLabelBar();
-         
-    popMatrix();
     
+    if (m_brushLinkUnderConstruction) {
+      // draw a border around the node to indicate that this has been selected as the first node of
+      // a new brush link
+      pushStyle();
+      strokeWeight(2);
+      stroke(#FF0000); // TO DO: define this (and weight) as class variables
+      noFill();
+      rect(0, 0, m_sNodeW, m_sNodeH);
+      popStyle();
+    }    
+    
+    popStyle();
+    popMatrix();
   }
 
   
@@ -298,8 +330,6 @@ public abstract class Node {
       
     }
     
-    
-    
     popMatrix();
   }
   
@@ -323,12 +353,21 @@ public abstract class Node {
   }
   
   
+  boolean mouseOver() {
+    // Returns true if the mouse pointer is currently over this node, otherwise false.
+    return (scaledMouseX() >= m_x &&
+            scaledMouseX() < m_x + m_sNodeW &&
+            scaledMouseY() >= m_y &&
+            scaledMouseY() <= m_y + m_sNodeH);
+  }
+  
+  
   void mousePressed() {
     
     m_mousePressX = scaledMouseX();
     m_mousePressY = scaledMouseY();
     
-    if (scaledMouseX() >= m_x && scaledMouseX() < m_x + m_sNodeW && scaledMouseY() >= m_y && scaledMouseY() <= m_y + m_sNodeH) {
+    if (mouseOver()) {
       // the mouse has been pressed within this node, so figure out what we need to do about it!
       
       if (scaledMouseY() < m_y + m_mbH) {
@@ -509,18 +548,25 @@ public abstract class Node {
           }
         }         
       }
+      // if this node's range selector bar has been dragged, we now need to move the range selector bars
+      // of any nodes that are currently linked to this one
+      m_model.adjustBrushLinkedNodes(this);
     }
     
     if (m_rsLow != rsLowOld || m_rsHigh != rsHighOld) {
       switch(m_model.m_interactionMode) {
-        case SingleNodeBrushing:
+        case SingleNodeBrushing: {
           m_model.brushAllNodesOnOneSelection(this);
           break;
-        case MultiNodeBrushing:
+        }
+        case MultiNodeBrushing: {
           m_model.brushAllNodesOnMultiSelection();
           break;
-        default:
+        }
+        default: {
           println("I shouldn't be here!!");
+          exit();
+        }
       }
     }
   }
@@ -641,18 +687,68 @@ public abstract class Node {
   int scaledMouseX() {
     return (int)((float)(mouseX * 100.0) / m_model.m_globalZoom);
   }
+
   
   int scaledMouseY() {
     return (int)((float)(mouseY * 100.0) / m_model.m_globalZoom);
   }
 
+
   int scaledPMouseX() {
     return (int)((float)(pmouseX * 100.0) / m_model.m_globalZoom);
   }
   
+  
   int scaledPMouseY() {
     return (int)((float)(pmouseY * 100.0) / m_model.m_globalZoom);
   }
+  
+  
+  void setBrushLinkUnderConstruction(boolean flag) {
+    m_brushLinkUnderConstruction = flag;
+  }
+  
+  
+  void adjustRangeSelector(Node node, float strength) {
+    // Adjust this node's range selector, based upon the position of the range selector of the other
+    // node passed in to this method.
+    int oMax = node.m_hgNumBins - 1;
+    int oLow = node.m_rsLow;
+    int oHigh = node.m_rsHigh;
+    float otherRSPosFrac = ((float)(oLow + oHigh) / (float)(2 * oMax));  
+
+    float thisCurrentRSPos = (float)m_rsLow + (((float)(m_rsHigh - m_rsLow)) / 2.0);
+    
+    int thisMax = m_hgNumBins - 1;
+    float thisTargetRSPos;
+   
+    if (strength >= 0.0) {
+      thisTargetRSPos = strength * otherRSPosFrac * (float)thisMax;
+    }
+    else {
+      thisTargetRSPos = (1.0 + (strength * otherRSPosFrac)) * (float)thisMax;
+    }
+    
+    //println("Adjusting linked nodes "+m_name+" and "+node.m_name);
+    //println("m_rsLow="+m_rsLow+", m_rsHigh="+m_rsHigh+", thisMax="+thisMax);
+    //println("oPosFrac = "+otherRSPosFrac+", thisCurPos="+thisCurrentRSPos+", thisTargPos="+thisTargetRSPos);      
+    
+    int delta = round(thisTargetRSPos - thisCurrentRSPos);
+    
+    m_rsLow += delta;
+    m_rsHigh += delta;
+    
+    if (m_rsLow < 0) {
+      int d = -m_rsLow;
+      m_rsLow += d;
+      m_rsHigh += d;
+    }
+    else if (m_rsHigh >= m_hgNumBins) {
+      int d = m_rsHigh + 1 - m_hgNumBins;
+      m_rsLow -= d;
+      m_rsHigh -= d;
+    }
+  }  
 
   
 }

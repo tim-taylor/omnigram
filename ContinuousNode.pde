@@ -1,6 +1,5 @@
 public class ContinuousNode extends Node {
-  
-  
+
   // Range selector info
   float m_rangeMin;      // min value selectable
   float m_rangeMax;      // max value selectable

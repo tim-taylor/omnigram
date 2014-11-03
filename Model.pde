@@ -19,6 +19,11 @@ public class Model {
   ArrayList<Node> m_allNodes;     // contains ALL nodes (the union of rnodes, inodes and lnodes)
   boolean m_allNodesSafe = false; // can we use allNodes or do we have to rebuild it?
   
+  // information about brush links between nodes
+  ArrayList<BrushLink> m_brushLinks;
+  boolean m_bNewBrushLinkUnderConstruction;
+  Node m_newBrushLinkNode1;
+  
   // current mode of interaction
   InteractionMode m_interactionMode = InteractionMode.Unassigned;
   
@@ -151,16 +156,17 @@ public class Model {
   
   
   void setDefaults() {
-    // m_fields = 0;
-    m_data = new ArrayList<ArrayList<Number>>();
+    m_data       = new ArrayList<ArrayList<Number>>();
     m_dataLabels = new ArrayList<String>();
-    m_rnodes   = new ArrayList<Node>();
-    m_inodes   = new ArrayList<Node>();
-    m_lnodes   = new ArrayList<Node>();
-    m_allNodes = new ArrayList<Node>();
+    m_rnodes     = new ArrayList<Node>();
+    m_inodes     = new ArrayList<Node>();
+    m_lnodes     = new ArrayList<Node>();
+    m_allNodes   = new ArrayList<Node>();
     m_allNodesSafe = false;
+    m_brushLinks = new ArrayList<BrushLink>();
+    m_bNewBrushLinkUnderConstruction = false;
     m_modelDataLabelCol = 0;
-    m_smallFont = createFont("Arial", 11, true);
+    m_smallFont  = createFont("Arial", 11, true);
     m_mediumFont = createFont("Arial", 16, true);
   }
 
@@ -391,11 +397,18 @@ public class Model {
     
     m_globalZoom = globalZoom;
     
+    // draw brush links
+    for (BrushLink link : m_brushLinks) {
+      link.draw();
+    }    
+    
+    // draw nodes
     checkAllNodesSafe();
     for (Node node : m_allNodes) {
       node.draw(nodeZoom);
     }
     
+    // calculate menu visibility based upon position of mouse pointer
     if (mouseY < m_menuH) {
       if (mouseY < pmouseY) {
         m_menuVisible = true;
@@ -405,6 +418,7 @@ public class Model {
       m_menuVisible = false;
     }
     
+    // draw menu if required
     if (m_menuVisible) {
       fill(m_menuBackgroundColor);
       rect(0, 0, width, m_menuH);
@@ -431,7 +445,10 @@ public class Model {
     checkAllNodesSafe();
     for (Node node : m_allNodes) {
       node.mousePressed();
-    }      
+    }
+    for (BrushLink link : m_brushLinks) {
+      link.mousePressed();
+    }    
   }
  
  
@@ -448,6 +465,107 @@ public class Model {
     for (Node node : m_allNodes) {
       node.mouseDragged();
     }     
+  }
+  
+  
+  void linkRequest() {
+    // The user has pressed 'L' to create a new brush link or to delete an existing link
+    // We first look at the case of deleting an existing link, by checking if the mousr pointer is
+    // currently over a link's control handle. If so, we delete that link.
+    // Otherwise, we check if the mouse pointer is currently over a node, and whether we have already
+    // initiated a new brush link creation process (in which case this is the second node of the link
+    // rather than the first).
+    
+    // First check for deletion of an existing link
+    for (BrushLink link : m_brushLinks) {
+      if (link.mouseOver()) {
+        m_brushLinks.remove(link);
+        return;
+      }
+    }    
+    
+    // Failing that, look for creation of a new link
+    checkAllNodesSafe();
+    for (Node node : m_allNodes) {
+      if (node.mouseOver()) {
+        // mouse is over this node, so let's investigate further...
+        if (m_bNewBrushLinkUnderConstruction) {
+          if (checkProposedBrushLinkValid(node)) {
+            BrushLink link = new BrushLink(this, m_newBrushLinkNode1, node, 1.0);
+            m_brushLinks.add(link); 
+          }
+          else {
+            // tried to create a link, but it is not valid. Indicate this to the user
+            // TO DO...
+          }
+          m_newBrushLinkNode1.setBrushLinkUnderConstruction(false);
+          m_bNewBrushLinkUnderConstruction = false;
+        }
+        else {
+          // this is the first node specified for a new link
+          m_bNewBrushLinkUnderConstruction = true;
+          m_newBrushLinkNode1 = node;
+          node.setBrushLinkUnderConstruction(true);
+        }
+        break;
+      }
+    }
+
+  }
+  
+  
+  boolean checkProposedBrushLinkValid(Node node) {   
+    // Perform the following checks on whether the proposed creation of a new
+    // brush link between m_newBrushLinkNode1 and node is valid:
+    // 1. Check that we're not trying to link a node to itself
+    // 2. Check that both nodes currently have focus
+    // 3. Check that the link doesn't already exist
+    // 4. Check that the creation of the link does not create any circular links between nodes
+    
+    assert(m_bNewBrushLinkUnderConstruction);
+        
+    boolean valid = true;
+    
+    // Check 1
+    if (node == m_newBrushLinkNode1) {
+      return false;
+    }
+    
+    // Check 2
+    if (!(node.m_bHasFocus && m_newBrushLinkNode1.m_bHasFocus)) {
+      return false;
+    }
+
+    // Check 3
+    for (BrushLink link : m_brushLinks) {
+      if ((link.m_node1 == node && link.m_node2 == m_newBrushLinkNode1) ||
+          (link.m_node2 == node && link.m_node1 == m_newBrushLinkNode1)) {
+        return false;
+      }
+    }
+    
+    // Check 4
+    // Actually, we can get away without this at the moment, as we don't propagate linked
+    // brushing in any case, so circular links do not cause a problem
+    // TO DO... at some point in the future, if and when we implement propagation of linked brushing
+    
+    return valid;
+  }
+  
+  
+  void adjustBrushLinkedNodes(Node node) {
+    // This method is called when node's range selector bar has been dragged.
+    // Look for any other nodes that are linked to node in m_brushLinks. If any are found, adjust
+    // their range selector bars according to the nature of the link.
+    
+    for (BrushLink link : m_brushLinks) {
+      if (link.m_node1 == node) {
+        link.m_node2.adjustRangeSelector(node, link.m_strength);
+      }
+      else if (link.m_node2 == node) {
+        link.m_node1.adjustRangeSelector(node, link.m_strength);
+      }
+    }
   }
   
   

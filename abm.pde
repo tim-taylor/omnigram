@@ -76,6 +76,10 @@ void keyPressed() {
     case '2':
       model.setInteractionMode(InteractionMode.MultiNodeBrushing);
       break;
+    case 'L':
+    case 'l':
+      model.linkRequest();
+      break;
     default:
       break;
   }
