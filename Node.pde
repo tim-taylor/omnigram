@@ -81,12 +81,12 @@ public abstract class Node {
   abstract Number getHistogramBinHighVal(int bin);
 
   
-  Node(Model model, int id, String name, int filecol, ArrayList<Integer> parentIDs) {
+  Node(Model model, int id, String name, int filecol, int datacol, ArrayList<Integer> parentIDs) {
     m_model = model;
     m_id = id;
     m_name = name;
     m_dataFileCol = filecol;
-    m_dataArrayCol = m_dataFileCol-1;
+    m_dataArrayCol = datacol;
     m_parentIDs = parentIDs;
     m_hgNumBins = 10;
     m_hgBins = new ArrayList<HistogramBin>();
@@ -168,6 +168,7 @@ public abstract class Node {
     for (ArrayList<Number> row : m_model.m_data) {
       Number data = row.get(m_dataArrayCol); // from this data sample, get the column corresponding to this node
       int idx = getHistogramIndex(data);     // get the bin (index of m_hgBins) that this data value belongs to
+      //println(m_name+": rowNum="+rowNum+", m_dataArrayCol="+m_dataArrayCol+", data="+data+", idx="+idx);
       m_hgBinSampleCounts[idx]++;
       sampleIDs.get(idx).add(rowNum);
       rowNum++;

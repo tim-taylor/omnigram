@@ -7,8 +7,8 @@ public class DiscreteNode extends Node {
   int m_rangeHigh;     // current high point selected  
   
   
-  DiscreteNode(Model model, int id, String name, int filecol, int min, int max, ArrayList<Integer> parentIDs) {
-    super(model, id, name, filecol, parentIDs);
+  DiscreteNode(Model model, int id, String name, int filecol, int datacol, int min, int max, ArrayList<Integer> parentIDs) {
+    super(model, id, name, filecol, datacol, parentIDs);
     m_rangeMin = m_rangeLow = min;
     m_rangeMax = m_rangeHigh = max;
   }

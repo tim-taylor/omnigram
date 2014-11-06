@@ -7,7 +7,7 @@ public class Model {
   String  m_modelName;
   boolean m_modelHasData;
   boolean m_modelHasDataLabels;
-  int     m_modelDataLabelCol;
+  int     m_modelDataLabelFileCol;  // column in data file corresponding to sample label (1-based)
   String  m_modelDataFilename;
   boolean m_modelLiveRun;
   
@@ -61,7 +61,7 @@ public class Model {
     String sDataHasLabels = general.getString("has-labels");
     m_modelHasDataLabels = (sDataHasLabels != null) && (sDataHasLabels.equals("true"));
     
-    m_modelDataLabelCol = general.getInt("label-filecol");
+    m_modelDataLabelFileCol = general.getInt("label-filecol");
     
     String sLiveRun = general.getString("live");
     m_modelLiveRun = (sLiveRun != null) && (sLiveRun.equals("true"));
@@ -76,7 +76,9 @@ public class Model {
     
     int rYpos = 20;
     int iYpos = 20;
-    int lYpos = 20;    
+    int lYpos = 20;   
+   
+    int nextFreeDataCol = 0; 
     
     for (int i=0; i < nodes.length; i++) {
       int imin, imax;
@@ -106,12 +108,12 @@ public class Model {
       if (datatype.equals("discrete")) {
         imin = xnode.getInt("min");
         imax = xnode.getInt("max");
-        newnode = new DiscreteNode(this,id,name,filecol,imin,imax,parentIDs);
+        newnode = new DiscreteNode(this,id,name,filecol,nextFreeDataCol++,imin,imax,parentIDs);
       }
       else if (datatype.equals("continuous")) {
         fmin = xnode.getFloat("min");
         fmax = xnode.getFloat("max");
-        newnode = new ContinuousNode(this,id,name,filecol,fmin,fmax,parentIDs);
+        newnode = new ContinuousNode(this,id,name,filecol,nextFreeDataCol++,fmin,fmax,parentIDs);
       }
       else {
         println("Oops! Found a node of unknown type '" + datatype + "' in file " + configXMLfilename);
@@ -165,52 +167,86 @@ public class Model {
     m_allNodesSafe = false;
     m_brushLinks = new ArrayList<BrushLink>();
     m_bNewBrushLinkUnderConstruction = false;
-    m_modelDataLabelCol = 0;
+    m_modelDataLabelFileCol = 0;
     m_smallFont  = createFont("Arial", 11, true);
     m_mediumFont = createFont("Arial", 16, true);
   }
 
 
   void load(String filename) {
+    // Having set up the Node objects, read in data from the specified data file (in CSV format) and store it 
+    // in the m_data variable
+    
     String lines[] = loadStrings(filename);
     
     checkAllNodesSafe();
     int numNodes = m_allNodes.size();
-    boolean[] colDiscrete = new boolean[numNodes];
-    for (Node node : m_allNodes) {
-      assert(node.m_dataArrayCol < numNodes); // TODO: for now, assuming all cols have associated nodes, and cols labeled from 1 up
-      colDiscrete[node.m_dataArrayCol] = (node instanceof DiscreteNode);
-    }
     
+    // cycle through each line of data in the date file
     for (int i = 0 ; i < lines.length; i++) {
+
+      boolean dataAdded = false;
+      boolean exception = false;
+      String label = "";
+      
       String[] data = splitTokens(lines[i],",");
-      ArrayList<Number> row = new ArrayList<Number>();
+      ArrayList<Number> row = new ArrayList<Number>(numNodes);
+      for (int n=0; n<numNodes; n++) {
+        // just fill the array with 0s for now. We'll replace these with the real data in due course
+        row.add(0); 
+      }
         
-      for (int j=0; j < data.length /*m_fields.length*/; j++) {
-        boolean dataAdded = false;
-         
-        if (j == m_modelDataLabelCol-1) {
-          m_dataLabels.add(data[j]); // TO DO: we are assuming here that every row has a label, so data and labels remain in sync
-        }
-        else if (colDiscrete[j]) {
-          Integer val = Integer.valueOf(data[j]);
-          row.add(val);
-          dataAdded = true;
-        }
-        else /*if (m_fields[j].isFloat())*/ {
-          Float val = Float.valueOf(data[j]);
-          row.add(val);
-          dataAdded = true;
+      // read each column of data in this row
+      for (int j=0; j < data.length; j++) {
+      
+        int thisFileCol = j+1;
+        
+        // work out where to store this data
+        for (Node node : m_allNodes) {
+
+          if (node.m_dataFileCol == thisFileCol) {
+            
+            if (m_modelDataLabelFileCol == thisFileCol) {
+              label = data[j];
+            }
+            else if (node instanceof DiscreteNode) {
+              try {
+                Integer val = Integer.valueOf(data[j]);
+                row.set(node.m_dataArrayCol, val);
+                dataAdded = true;
+              }
+              catch (Exception e) {
+                exception = true;
+              }
+            }  
+            else if (node instanceof ContinuousNode) {
+              try {
+                Float val = Float.valueOf(data[j]);
+                row.set(node.m_dataArrayCol, val);
+                dataAdded = true;
+              }
+              catch (Exception e) {
+                exception = true;
+              }
+            }
+            else {
+              // Don't know what to do with this column of data, so ignore it
+            }
+          }
         }
       }
-      m_data.add(row);
+      
+      // if we successfully read all of the data in the row, then store it!
+      if (exception) {
+        println("Problem encountered in line "+(i+1)+" of data file. Ignoring data in this line.");
+      }
+      else if (dataAdded) {  
+        m_data.add(row);
+        m_dataLabels.add(label);
+      }
+      
     }
-    
-    /*
-    for (int i=0; i<m_data.size(); i++) {
-      println(m_data.get(i).get(1));
-    }
-    */
+
   }
 
   

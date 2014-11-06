@@ -9,7 +9,9 @@
 *
 */
 
-String modelLoaderFile = "auto-mpg-loader.xml";  // N.B. loader doesn't seem to cope with filenames that are symbolic links!
+// N.B. When specifying the loader file, loader doesn't seem to cope with filenames that are symbolic links!
+//String modelLoaderFile = "breast-cancer-wisconsin-loader.xml";
+String modelLoaderFile = "pertussis-data-reduced-n-10000-seed-1-clean-loader.xml";
 
 int globalZoom = 100;
 int nodeZoom = 100;
