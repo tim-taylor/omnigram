@@ -5,14 +5,14 @@ public abstract class Node {
   String m_name;        // human readable name of node
   
   // Widget appearance and position
-  int m_sNodeW = 330;   // width of Node widget, same for all nodes 
-  int m_sNodeH = 200;   // height of Node widget, same for all nodes
+  int m_nodeW;          // width of Node widget
+  int m_nodeH;          // height of Node widget
   int m_x;              // x position of top-left corner
   int m_y;              // y position of top-left corner
   int m_nodeZoom = 100;
     
   protected int m_mbH = 25;      // menu bar height
-  protected int m_hgH;           // histogram height (DERIVED = m_sNodeH - m_mbH - m_rsH - m_lbH)
+  protected int m_hgH;           // histogram height (DERIVED = m_nodeH - m_mbH - m_rsH - m_lbH)
   protected int m_hgHeadH = 12;  // histogram header height (for drawing bin base lines): this is part of m_hgH
   protected int m_hgFootH = 7;   // histogram footer height (for drawing bin base lines): this is part of m_hgH
   protected int m_rsH = 25;      // range selector height
@@ -88,9 +88,11 @@ public abstract class Node {
     m_dataFileCol = filecol;
     m_dataArrayCol = datacol;
     m_parentIDs = parentIDs;
+    m_nodeW = getDefaultW();
+    m_nodeH = getDefaultH();
     m_hgNumBins = 10;
     m_hgBins = new ArrayList<HistogramBin>();
-    m_hgH = m_sNodeH - m_mbH - m_rsH - m_lbH;
+    m_hgH = m_nodeH - m_mbH - m_rsH - m_lbH;
     m_hgDefaultMaxBinH = m_hgH - m_hgHeadH - m_hgFootH; 
     m_mbBackgroundColor    = #E0E0E0;
     m_hgBackgroundColor    = #FFFFFF;
@@ -111,9 +113,44 @@ public abstract class Node {
     m_mousePressY = 0;
     m_rsMousePressLLDeltaX = 0;
     m_rsMousePressRRDeltaX = 0;
-    m_x = (int)random(0, width - m_sNodeW);
-    m_y = (int)random(0, height - m_sNodeH);
+    m_x = (int)random(0, width - m_nodeW);
+    m_y = (int)random(0, height - m_nodeH);
     m_brushLinkUnderConstruction = false;
+  }
+  
+  
+  int getDefaultW() {
+    return m_model.m_nodeDefaultWidth;
+  }
+  
+  
+  int getDefaultH() {
+    return m_model.m_nodeDefaultHeight;
+  }
+  
+  
+  void setH(int h, boolean resizeBins) {
+    
+    //float histSF = (float)h / (float)m_nodeH;
+    
+    int oldHistH = m_nodeH - m_mbH - m_rsH - m_lbH - m_hgHeadH - m_hgFootH;
+    int newHistH = h - m_mbH - m_rsH - m_lbH - m_hgHeadH - m_hgFootH;
+    float histSF = (float)newHistH / (float)oldHistH;
+    
+    //println("Node "+m_name+": sf="+sf); 
+    
+    m_nodeH = h;
+    m_hgH = m_nodeH - m_mbH - m_rsH - m_lbH;
+    for (HistogramBin bin : m_hgBins) {
+      bin.setY(m_hgH - m_hgFootH);
+    }
+ 
+    if (resizeBins) {
+      for (HistogramBin bin : m_hgBins) {
+        bin.scaleH(histSF);
+      }      
+    }
+    
   }
   
   
@@ -140,7 +177,7 @@ public abstract class Node {
   
   int getCentreX() {
     // returns the x position of the centre of the node
-    return (m_x + (m_sNodeW / 2));
+    return (m_x + (m_nodeW / 2));
   }
 
 
@@ -158,12 +195,14 @@ public abstract class Node {
     m_hgBinSampleCounts = new int[m_hgNumBins];
     m_hgBinMinVals = new ArrayList<Number>();
     
+    // for each bin in the histogram, record the minimum value of its range
     ArrayList<ArrayList<Integer>> sampleIDs = new ArrayList<ArrayList<Integer>>();
     for (int i=0; i < m_hgNumBins; i++) {
       sampleIDs.add(new ArrayList<Integer>());
       m_hgBinMinVals.add(getHistogramBinLowVal(i));
     }
     
+    // for each sample of data, add it to the appropriate bin
     int rowNum = 0;
     for (ArrayList<Number> row : m_model.m_data) {
       Number data = row.get(m_dataArrayCol); // from this data sample, get the column corresponding to this node
@@ -176,33 +215,36 @@ public abstract class Node {
 
     m_rsHigh = m_hgNumBins-1;
     
-    int gap = (int)((float)(m_sNodeW - (m_hgNumBins * m_hgDefaultBinW)) / (float)(m_hgNumBins + 1)); 
+    // work out the appropriate spacing between bins in the histogram
+    int gap = (int)((float)(m_nodeW - (m_hgNumBins * m_hgDefaultBinW)) / (float)(m_hgNumBins + 1)); 
     gap = constrain(gap, m_hgMinInterBinGap, m_hgMaxInterBinGap);
-    //int binx = (m_sNodeW - (m_hgNumBins * m_sStandardHistBinWidth) - ((m_hgNumBins-1) * gap)) / 2;
     int binx = gap;
     int maxH = 0;
     
-    //println("Node: "+m_name);
+    // create a new HistogramBin object for each bin
     for (int i=0; i<m_hgNumBins; i++) {
       HistogramBin bin = new HistogramBin(this, m_hgBins.size(), m_hgBinSampleCounts[i], sampleIDs.get(i), binx, m_hgH - m_hgFootH);
-      //println(" bin "+i+", x="+binx+", gap="+gap+", m_w="+bin.m_w);
       m_hgBins.add(bin);
       maxH = max(maxH, bin.getH());
       binx += bin.m_w + gap;
     }
     
     // reset width of node according to space taken up by the bins
-    m_sNodeW = binx;
+    m_nodeW = binx;
     
-    // if the max bin height is greater than the height allowed by the node, heighten node to fit
+    // if the max bin height is greater than the height allowed by the node, increase height of node to fit
     int newH = m_mbH + m_rsH + m_lbH + m_hgHeadH + maxH + m_hgFootH;
-    if (newH > m_sNodeH) {
-      m_sNodeH = newH;
-      m_hgH = m_sNodeH - m_mbH - m_rsH - m_lbH;
+    if (newH > m_nodeH) {
+      setH(newH, false);
+      /*
+      m_nodeH = newH;
+      m_hgH = m_nodeH - m_mbH - m_rsH - m_lbH;
       for (HistogramBin bin : m_hgBins) {
         bin.setY(m_hgH - m_hgFootH);
-      }      
+      } 
+      */     
     }
+    
   }
   
   
@@ -240,7 +282,7 @@ public abstract class Node {
       strokeWeight(2);
       stroke(#FF0000); // TO DO: define this (and weight) as class variables
       noFill();
-      rect(0, 0, m_sNodeW, m_sNodeH);
+      rect(0, 0, m_nodeW, m_nodeH);
       popStyle();
     }    
     
@@ -252,7 +294,7 @@ public abstract class Node {
   void drawMenuBar() {
     pushMatrix();    
     fill(m_mbBackgroundColor);
-    rect(0, 0, m_sNodeW, m_mbH);
+    rect(0, 0, m_nodeW, m_mbH);
     popMatrix();
   }
 
@@ -261,7 +303,7 @@ public abstract class Node {
     pushMatrix();
     translate(0, m_mbH);
     fill(m_hgBackgroundColor);
-    rect(0, 0, m_sNodeW, m_hgH);
+    rect(0, 0, m_nodeW, m_hgH);
     
     if (m_hgBins != null) {
       for (HistogramBin bin : m_hgBins) {
@@ -292,7 +334,7 @@ public abstract class Node {
     pushMatrix();
     translate(0, m_mbH+m_hgH);
     fill(m_rsBackgroundColor);
-    rect(0, 0, m_sNodeW, m_rsH);
+    rect(0, 0, m_nodeW, m_rsH);
 
     if (m_hgBins != null) {
       int llx = m_hgBins.get(m_rsLow).getLX();
@@ -339,11 +381,11 @@ public abstract class Node {
     pushMatrix();
     translate(0, m_mbH+m_hgH+m_rsH);
     fill(m_lbBackgroundColor);
-    rect(0, 0, m_sNodeW, m_lbH);    
+    rect(0, 0, m_nodeW, m_lbH);    
     textFont(m_model.m_mediumFont, 16);
     fill(m_lbForegroundColor);
     textAlign(CENTER);
-    text(m_name, m_sNodeW/2, m_lbH-8);
+    text(m_name, m_nodeW/2, m_lbH-8);
     popMatrix();
   }
   
@@ -357,9 +399,9 @@ public abstract class Node {
   boolean mouseOver() {
     // Returns true if the mouse pointer is currently over this node, otherwise false.
     return (scaledMouseX() >= m_x &&
-            scaledMouseX() < m_x + m_sNodeW &&
+            scaledMouseX() < m_x + m_nodeW &&
             scaledMouseY() >= m_y &&
-            scaledMouseY() <= m_y + m_sNodeH);
+            scaledMouseY() <= m_y + m_nodeH);
   }
   
   
@@ -457,8 +499,8 @@ public abstract class Node {
       ///////////// WHOLE NODE DRAGGED /////////////////////////////////////////////////
       m_x += (scaledMouseX() - scaledPMouseX());
       m_y += (scaledMouseY() - scaledPMouseY());
-      constrain(m_x, 0, width - m_sNodeW);
-      constrain(m_y, 0, height - m_sNodeH);      
+      constrain(m_x, 0, width - m_nodeW);
+      constrain(m_y, 0, height - m_nodeH);      
     }
     else if (m_rsLeftHandlePressed) {
       ///////////// RANGE SELECTOR LEFT HANDLE DRAGGED /////////////////////////////////

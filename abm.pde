@@ -11,7 +11,8 @@
 
 // N.B. When specifying the loader file, loader doesn't seem to cope with filenames that are symbolic links!
 //String modelLoaderFile = "breast-cancer-wisconsin-loader.xml";
-String modelLoaderFile = "pertussis-data-reduced-n-10000-seed-1-clean-loader.xml";
+//String modelLoaderFile = "pertussis-data-reduced-n-1000-seed-1-clean-loader.xml";
+String modelLoaderFile = "influenza-data-31-20-n-1000-clean-loader.xml";
 
 int globalZoom = 100;
 int nodeZoom = 100;
@@ -64,14 +65,20 @@ void mouseDragged() {
 
 void keyPressed() {
   switch (key) {
-    case '+':
-      globalZoom++;
-      redraw();
+    case '+': {
+      if (globalZoom < 1000) { 
+        globalZoom++;
+        redraw();
+      }
       break;
-    case '-':
-      globalZoom--;
-      redraw();
+    }
+    case '-': {
+      if (globalZoom > 1) {
+        globalZoom--;
+        redraw();
+      }
       break;
+    }
     case '1':
       model.setInteractionMode(InteractionMode.SingleNodeBrushing);
       break;

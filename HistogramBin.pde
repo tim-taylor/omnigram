@@ -53,11 +53,13 @@ class HistogramBin {
   void setBinDimensions() {
     int dh = m_node.m_hgDefaultMaxBinH;
     int dw = m_node.m_hgDefaultBinW;
-    //int bhs = m_node.m_model.m_sStandardHistBinSampleHeight;
+    int numSamplesAll = m_node.m_model.m_data.size();
+    float nodeSF = m_node.m_model.m_nodeBinScaleFactor;
     
     switch (m_node.m_model.m_visualisationMode) {
       case FullAutoHeightAdjust: {
-        m_h = (int)(0.01*(float)(dh * m_numSamples));  // TO DO.. sort out some proper scaling factor
+        //m_h = (int)(0.004*(float)(dh * m_numSamples));  // TO DO.. sort out some proper scaling factor
+        m_h = (int)((nodeSF * (float)(dh * m_numSamples))/((float)numSamplesAll));
         m_w = dw;
         // TO DO: need to potentially adjust m_node.m_hgH, plus adjust positions of other nodes
         break;
@@ -79,6 +81,11 @@ class HistogramBin {
   
   void setY(int y) {
     m_y = y;
+  }
+  
+  
+  void scaleH(float sf) {
+    m_h = (int)(((float)m_h) * sf);
   }
   
   
@@ -292,18 +299,7 @@ class HistogramBin {
   
 
   boolean sampleBrushed(int sampleID) {
-    // returns true if the specified sample is brushed (numMisses==0) in this bin
-
-    /*
-    // TO DO... THE FOLLOWING LINES ARE TEMP CODE...
-    if (m_idx==1 && random(100) < 5) {
-      int numS = m_numSamples;
-      int numB = m_brushedSampleIDs.size();
-      boolean b = m_brushedSampleIDs.contains(sampleID);
-      println(m_node.m_name+", bin "+m_idx+", numS="+numS+", numB="+numB+", sample "+sampleID+", brushed="+(b?"yes":"no"));
-    }
-    */
-    
+    // returns true if the specified sample is brushed (numMisses==0) in this bin   
     return m_brushedSampleIDs.contains(sampleID);    
   }  
   

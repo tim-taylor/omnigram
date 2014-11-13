@@ -1,3 +1,5 @@
+import java.util.Arrays;
+
 public class Model {
 
   ArrayList<ArrayList<Number>> m_data; // holds the model's data, indexed by m_data.get(sampleID).get(node.m_dataArrayCol)
@@ -32,7 +34,13 @@ public class Model {
   boolean m_visTiled = true; // tiled or continuous?
   
   // global information about appearance
-  int m_globalZoom = 100;
+  int   m_globalZoom = 100;
+  int   m_nodeDefaultHeight  = 200;
+  int   m_nodeDefaultWidth   = 330;
+  float m_nodeBinScaleFactor = 5.0; // used to determine the default scale of histogram bins in nodes
+  int   m_numRootCols = 1;
+  int   m_numInterCols = 1;
+  int   m_numLeafCols = 1;
   
   // global UI items
   int     m_menuH = 50;
@@ -70,6 +78,20 @@ public class Model {
     if (modelLabel != null) {
       m_modelName = modelLabel.getContent();
     }
+    
+    XML appearance = xml.getChild("appearance");
+    if (appearance != null) {
+      m_nodeDefaultHeight = appearance.getInt("node-default-height", m_nodeDefaultHeight);
+      m_nodeDefaultWidth = appearance.getInt("node-default-width", m_nodeDefaultWidth);
+      m_nodeBinScaleFactor = appearance.getFloat("node-bin-scale-factor", m_nodeBinScaleFactor);
+      m_numRootCols = appearance.getInt("num-root-cols", m_numRootCols);
+      m_numInterCols = appearance.getInt("num-inter-cols", m_numInterCols);
+      m_numLeafCols = appearance.getInt("num-leaf-cols", m_numLeafCols);
+    }
+    
+    
+    // Now go through each of the nodes specified in the XML file, and create a new Node object of
+    // the appropriate subclass (discrete, continuous) for each one
     
     XML nodelist = xml.getChild("nodes"); 
     XML[] nodes = nodelist.getChildren("node");
@@ -144,14 +166,49 @@ public class Model {
       }
     }
     
+    // We have now created all of the nodes, now we lay them out on the screen according to any
+    // layout specifications given in the XML file (note that later on we tweek the positions
+    // once we have loaded in the data, in case any node has had to be resized)
+    
+    // TO DO...
+    
+    
     // Having read all of the model specification file, load in the data if a
     // data file has been specified
     if (m_modelHasData) {
+      
+      // load data
       load(m_modelDataFilename);
-      checkAllNodesSafe();
+      
+      // first pass of initialisation of nodes based upon the data associated with each one
+      checkAllNodesSafe();      
+      int numNodes = m_allNodes.size(); 
+      int[] nodeHeights = new int[numNodes]; 
+      int n = 0;
       for (Node node : m_allNodes) {
         node.initialiseHistogram();
+        nodeHeights[n++] = node.getH();
       }
+      
+      // having initialised nodes, rescale them according to the distribution of heights of all nodes
+      Arrays.sort(nodeHeights);
+      /*
+      println("Sorted node heights:");
+      for (int i = 0; i < numNodes; i++) {
+        println(nodeHeights[i]);
+      }
+      println("*****");
+      */
+      int defaultH = m_allNodes.get(0).getDefaultH();
+      int refH = nodeHeights[(numNodes*3)/4];
+      if (defaultH != refH) {
+        float sf = (float)refH / (float)defaultH;
+        for (Node node : m_allNodes) {
+          node.setH((int)(((float)node.getH())*sf), true);
+        }
+      }
+      
+      // finally tile the nodes vertically
       tileNodesV();
     }
   }
