@@ -23,7 +23,8 @@ public abstract class Node {
   color m_hgBaseColor;
   color m_rsBackgroundColor;
   color m_rsHandleColor;
-  color m_rsMeanValColor;
+  color m_rsFocalMeanValColor;
+  color m_rsNonFocalMeanValColor;
   color m_rsHandlePressedColor;
   color m_rsSelectedRangeColor;
   color m_lbBackgroundColor;
@@ -94,16 +95,17 @@ public abstract class Node {
     m_hgBins = new ArrayList<HistogramBin>();
     m_hgH = m_nodeH - m_mbH - m_rsH - m_lbH;
     m_hgDefaultMaxBinH = m_hgH - m_hgHeadH - m_hgFootH; 
-    m_mbBackgroundColor    = #E0E0E0;
-    m_hgBackgroundColor    = #FFFFFF;
-    m_hgBaseColor          = #000000;
-    m_rsBackgroundColor    = #999999;
-    m_rsHandleColor        = #BBDDDD;
-    m_rsMeanValColor       = #FFFFFF;
-    m_rsHandlePressedColor = #DDFFFF;
-    m_rsSelectedRangeColor = #99BBBB;
-    m_lbBackgroundColor    = #E0E0E0;
-    m_lbForegroundColor    = #101010;
+    m_mbBackgroundColor      = #E0E0E0;
+    m_hgBackgroundColor      = #FFFFFF;
+    m_hgBaseColor            = #000000;
+    m_rsBackgroundColor      = #999999;
+    m_rsHandleColor          = #BBDDDD;
+    m_rsFocalMeanValColor    = #880000;
+    m_rsNonFocalMeanValColor = #000088;
+    m_rsHandlePressedColor   = #DDFFFF;
+    m_rsSelectedRangeColor   = #99BBBB;
+    m_lbBackgroundColor      = #E0E0E0;
+    m_lbForegroundColor      = #101010;
     m_bHasFocus = false;
     m_bNodeDragged = false;
     m_rsLeftHandlePressed = false;
@@ -130,14 +132,10 @@ public abstract class Node {
   
   
   void setH(int h, boolean resizeBins) {
-    
-    //float histSF = (float)h / (float)m_nodeH;
-    
+     
     int oldHistH = m_nodeH - m_mbH - m_rsH - m_lbH - m_hgHeadH - m_hgFootH;
     int newHistH = h - m_mbH - m_rsH - m_lbH - m_hgHeadH - m_hgFootH;
     float histSF = (float)newHistH / (float)oldHistH;
-    
-    //println("Node "+m_name+": sf="+sf); 
     
     m_nodeH = h;
     m_hgH = m_nodeH - m_mbH - m_rsH - m_lbH;
@@ -174,6 +172,11 @@ public abstract class Node {
     return (m_mbH + m_hgH + m_rsH + m_lbH);
   }
   
+  int getW() {
+    // returns the width of the node
+    return m_nodeW;
+  }
+  
   
   int getCentreX() {
     // returns the x position of the centre of the node
@@ -184,6 +187,11 @@ public abstract class Node {
   int getCentreY() {
     // returns the y position of the centre of the node
     return (m_y + (getH() / 2));
+  }
+  
+  
+  boolean hasFocus() {
+    return m_bHasFocus;
   }
 
   
@@ -221,12 +229,15 @@ public abstract class Node {
     int binx = gap;
     int maxH = 0;
     
+    
+    println("Node "+m_name+": number of samples per bin:");
     // create a new HistogramBin object for each bin
     for (int i=0; i<m_hgNumBins; i++) {
       HistogramBin bin = new HistogramBin(this, m_hgBins.size(), m_hgBinSampleCounts[i], sampleIDs.get(i), binx, m_hgH - m_hgFootH);
       m_hgBins.add(bin);
       maxH = max(maxH, bin.getH());
       binx += bin.m_w + gap;
+      println("  bin "+(i+1)+": "+m_hgBinSampleCounts[i]);
     }
     
     // reset width of node according to space taken up by the bins
@@ -235,14 +246,7 @@ public abstract class Node {
     // if the max bin height is greater than the height allowed by the node, increase height of node to fit
     int newH = m_mbH + m_rsH + m_lbH + m_hgHeadH + maxH + m_hgFootH;
     if (newH > m_nodeH) {
-      setH(newH, false);
-      /*
-      m_nodeH = newH;
-      m_hgH = m_nodeH - m_mbH - m_rsH - m_lbH;
-      for (HistogramBin bin : m_hgBins) {
-        bin.setY(m_hgH - m_hgFootH);
-      } 
-      */     
+      setH(newH, false);    
     }
     
   }
@@ -360,15 +364,21 @@ public abstract class Node {
         int hmx = (hlx+hrx)/2;
         int meanx = lmx + (int)(((meanv-lowv)*(float)(hmx-lmx))/(highv-lowv));
         int circ = (int)(0.5 * (float)m_rsH);
-        fill(m_rsMeanValColor);
+        fill(m_bHasFocus ? m_rsFocalMeanValColor : m_rsNonFocalMeanValColor);
         ellipse(meanx, m_rsH/2, circ, circ);
         
-        /*
+        // print a mu character in the middle of the circle representing the mean value
+        textFont(m_model.m_smallFont, 11);
+        fill(0xFFFFFFFF);
+        textAlign(CENTER);
+        text("\u03BC", meanx, (m_rsH*9)/16);      
+        
+        //
         // TO DO... TEMP DEBUGGING CODE
-        if (m_id==1) {
-          println(m_name+", meanv="+meanv+", lowv="+lowv+", highv="+highv+", lmx="+lmx+", hmx="+hmx+", meanx="+meanx);
+        if (m_id == 23) {
+          println(m_name+", meanv="+meanv+", lowv="+lowv+", highv="+highv+", lmx="+lmx+", hmx="+hmx+", meanx="+meanx+"  m_id="+m_id+", m_rsLow="+m_rsLow+", m_rsHigh="+m_rsHigh);
         }
-        */
+        //
       }
       
     }
@@ -421,16 +431,25 @@ public abstract class Node {
         ///////////// MOUSE IS IN THE HISTOGRAM AREA ///////////////////////////////////////////////
         
         switch (m_model.m_interactionMode) {
-          case SingleNodeBrushing:
+          case SingleNodeBrushing: {
             m_model.setSingleFocus(m_id);
             m_model.brushAllNodesOnOneSelection(this);          
             break;
-          case MultiNodeBrushing:
+          }
+          case MultiNodeBrushing: {
             m_model.toggleMultiFocus(m_id);
             m_model.brushAllNodesOnMultiSelection();          
             break;
-          default:
+          }
+          case ShowSamples: {
+            m_model.toggleMultiFocus(m_id);
+            m_model.brushAllNodesOnMultiSelection();
+            m_model.updateSelectedSampleList();
+            break;
+          }
+          default: {
             println("Unexpected interaction mode in Node.mousePressed()!");
+          }
         }
       }
       else if (scaledMouseY() >= m_y + m_mbH + m_hgH && scaledMouseY() <= m_y + m_mbH + m_hgH + m_rsH) {
@@ -606,6 +625,11 @@ public abstract class Node {
           m_model.brushAllNodesOnMultiSelection();
           break;
         }
+        case ShowSamples: {
+          m_model.brushAllNodesOnMultiSelection();
+          m_model.updateSelectedSampleList();
+          break;
+        }
         default: {
           println("I shouldn't be here!!");
           exit();
@@ -665,9 +689,12 @@ public abstract class Node {
   
   boolean rangeSelectorActive() {
     switch (m_model.m_interactionMode) {
+      
+      case SingleNodeBrushing:
+        return m_bHasFocus;
       case MultiNodeBrushing:
         return m_bHasFocus;
-      case SingleNodeBrushing:
+      case ShowSamples:
         return m_bHasFocus;
       default:
         return true;
@@ -721,7 +748,13 @@ public abstract class Node {
     int numSamples = 0;
     for (int b = m_rsLow; b <= m_rsHigh; b++) {
       total += m_hgBins.get(b).getTotalValues(brushedOnly);
+      if (m_id==23) {
+        println("mean calc: total for bin "+b+"="+(m_hgBins.get(b).getTotalValues(brushedOnly)) + ", numS=" + (m_hgBins.get(b).numSamples()));
+      }      
       numSamples += (brushedOnly ? m_hgBins.get(b).numBrushed() : m_hgBins.get(b).numSamples());
+    }
+    if (m_id==23) {
+      println("mean calc: total="+total+", numS="+numSamples);
     }
     return total / (float)numSamples;
   }  
@@ -791,7 +824,17 @@ public abstract class Node {
       m_rsLow -= d;
       m_rsHigh -= d;
     }
-  }  
+  }
+  
+  
+  ArrayList<Integer> getSamplesInRange() {
+    // returns a list of IDs of all samples within the currently selected range of this node
+    ArrayList<Integer> list = new ArrayList<Integer>();
+    for (int b = m_rsLow; b <= m_rsHigh; b++) {
+      list.addAll( m_hgBins.get(b).m_sampleIDs );
+    }
+    return list;
+  }
 
   
 }

@@ -1,4 +1,7 @@
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Collections;
 
 public class Model {
 
@@ -21,6 +24,9 @@ public class Model {
   ArrayList<Node> m_allNodes;     // contains ALL nodes (the union of rnodes, inodes and lnodes)
   boolean m_allNodesSafe = false; // can we use allNodes or do we have to rebuild it?
   
+  // a list of all currently-selected samples
+  HashSet<Integer> m_allSelectedSamples; // sample IDs (index of m_data) of all samples currently selected in focal nodes
+  
   // information about brush links between nodes
   ArrayList<BrushLink> m_brushLinks;
   boolean m_bNewBrushLinkUnderConstruction;
@@ -28,6 +34,16 @@ public class Model {
   
   // current mode of interaction
   InteractionMode m_interactionMode = InteractionMode.Unassigned;
+  
+  // information needed in ShowSamples interaction mode
+  boolean m_ssAutoUpdate = true;           // flags whether samples are automatically or manually updated
+  int m_ssTimer = 0;                       // a timer to determine when a new sample should be shown
+  int m_ssTimerReset = 30;                 // timer value at which a new sample is shown and timer reset occurs
+  int m_ssMaxSamplesToDisplay = 5;         // maximum allowed length of m_ssSamplesToDisplay 
+  ArrayList<Integer> m_ssSamplesToDisplay; // list of currently displayed SampleIDs, last in list is the most recent
+  int m_ssDisplayIdx = 0;                  // index of first current displayed sample in m_ssSamplesToDisplay
+  ArrayList<Integer> m_ssSampleHues;       // list of color hues used for displaying samples
+
   
   // mode of visualisation
   VisualisationMode m_visualisationMode = VisualisationMode.FullAutoHeightAdjust;
@@ -38,6 +54,7 @@ public class Model {
   int   m_nodeDefaultHeight  = 200;
   int   m_nodeDefaultWidth   = 330;
   float m_nodeBinScaleFactor = 5.0; // used to determine the default scale of histogram bins in nodes
+  int   m_minInternodeGap = 20;
   int   m_numRootCols = 1;
   int   m_numInterCols = 1;
   int   m_numLeafCols = 1;
@@ -84,6 +101,7 @@ public class Model {
       m_nodeDefaultHeight = appearance.getInt("node-default-height", m_nodeDefaultHeight);
       m_nodeDefaultWidth = appearance.getInt("node-default-width", m_nodeDefaultWidth);
       m_nodeBinScaleFactor = appearance.getFloat("node-bin-scale-factor", m_nodeBinScaleFactor);
+      m_minInternodeGap = appearance.getInt("min-internode-gap", m_minInternodeGap);
       m_numRootCols = appearance.getInt("num-root-cols", m_numRootCols);
       m_numInterCols = appearance.getInt("num-inter-cols", m_numInterCols);
       m_numLeafCols = appearance.getInt("num-leaf-cols", m_numLeafCols);
@@ -169,9 +187,7 @@ public class Model {
     // We have now created all of the nodes, now we lay them out on the screen according to any
     // layout specifications given in the XML file (note that later on we tweek the positions
     // once we have loaded in the data, in case any node has had to be resized)
-    
-    // TO DO...
-    
+    tileNodes(); 
     
     // Having read all of the model specification file, load in the data if a
     // data file has been specified
@@ -208,8 +224,10 @@ public class Model {
         }
       }
       
-      // finally tile the nodes vertically
-      tileNodesV();
+      // The node heights might have been adjusted now that we have added the data, so retile all 
+      // nodes to ensure that they are still evenly spaced
+      tileNodes();
+      
     }
   }
   
@@ -224,9 +242,13 @@ public class Model {
     m_allNodesSafe = false;
     m_brushLinks = new ArrayList<BrushLink>();
     m_bNewBrushLinkUnderConstruction = false;
+    m_allSelectedSamples = new HashSet<Integer>();
+    m_ssSamplesToDisplay = new ArrayList<Integer>();
+    m_ssSampleHues = new ArrayList<Integer>();
     m_modelDataLabelFileCol = 0;
     m_smallFont  = createFont("Arial", 11, true);
     m_mediumFont = createFont("Arial", 16, true);
+    resetSampleHueList();
   }
 
 
@@ -318,6 +340,56 @@ public class Model {
   }
   
   
+  void tileNodes() {
+    // Arrange all nodes to have regular spacing, according to the node heights and the
+    // model variables m_numRootCols, m_numInterCols, m_numLeafCols, m_minInternodeGap
+    
+    int currentColXpos = m_minInternodeGap;
+    
+    if (!m_rnodes.isEmpty()) {
+      currentColXpos = layoutNodeColumns(m_rnodes, m_numRootCols, currentColXpos);   
+      currentColXpos += m_minInternodeGap;
+    }
+    
+    if (!m_inodes.isEmpty()) {
+      currentColXpos = layoutNodeColumns(m_inodes, m_numInterCols, currentColXpos);   
+      currentColXpos += m_minInternodeGap;
+    }
+    
+    if (!m_lnodes.isEmpty()) {
+      currentColXpos = layoutNodeColumns(m_lnodes, m_numLeafCols, currentColXpos);   
+    }
+  }
+  
+  
+  int layoutNodeColumns(ArrayList<Node> nodes, int numCols, int firstColXpos) {
+    // Helper method for tileNodes
+    // Lay out the nodes passed in into the specified number of columns, beginning the
+    // first column at x position firstColXpos. 
+    // The method returns the x position to the right of the final column laid out
+    // plus a small extra spacing gap.
+  
+    int currentColXpos = firstColXpos;
+    int currentColYpos = m_minInternodeGap;  
+    int nodesPerCol = ceil((float)nodes.size() / (float)numCols);
+    int nIdx = 0;
+    
+    for (int c = 0; c < numCols; c++) {
+      int maxW = 0; // track the maximum width of a node in the current column
+      for (int n = 0; n < nodesPerCol && nIdx < nodes.size(); n++, nIdx++) {
+        Node node = nodes.get(nIdx);
+        node.setPosition(currentColXpos, currentColYpos);
+        currentColYpos += (node.getH() + m_minInternodeGap);
+        maxW = max(maxW, node.getW());
+      }
+      currentColXpos += (maxW + m_minInternodeGap);
+      currentColYpos = m_minInternodeGap;
+    }
+    
+    return currentColXpos;
+  }
+  
+  
   void setSingleFocus(int nodeIdx) {
     // in SingleNodeBrushing mode, set the indicated node to be the focus node, and
     // remove focus from all other nodes
@@ -370,6 +442,15 @@ public class Model {
         m_interactionMode = InteractionMode.MultiNodeBrushing;
         resetAllBrushing();
         brushAllNodesOnMultiSelection();
+        redraw();
+        break;
+      }
+      case ShowSamples: {
+        m_interactionMode = InteractionMode.ShowSamples;
+        resetAllBrushing();
+        brushAllNodesOnMultiSelection();
+        m_ssTimer = 0;
+        m_ssSamplesToDisplay.clear();
         redraw();
         break;
       }
@@ -445,45 +526,6 @@ public class Model {
   }
   
   
-  void tileNodesV() {
-    // rearrange all nodes to have a constant vertical spacing between nodes
-    tileNodesV(m_rnodes);
-    tileNodesV(m_inodes);
-    tileNodesV(m_lnodes);
-  }
-  
-  
-  void tileNodesV(ArrayList<Node> nodes) {
-    // rearrange the given nodes to have a constant vertical spacing between nodes
-    int[] startpos = new int[nodes.size()];
-    for (int i=0; i<nodes.size(); i++) {
-      startpos[i] = nodes.get(i).m_y;
-    }
-    startpos = sort(startpos);
-    int curY = m_defaultInterNodeGapV;
-    int deltaY = m_defaultInterNodeGapV;
-    for (int i=0; i<nodes.size(); i++) {
-      Node node = getNodeFromY(nodes, startpos[i]);
-      node.setY(curY);
-      curY += (node.getH() + deltaY);
-    }
-  }
-  
-  
-  Node getNodeFromY(ArrayList<Node> nodes, int y) {
-    // Look for the node which has a Y position of y from the list of nodes passed in.
-    // If found, return that node, else return the first node in the list
-    assert(!nodes.isEmpty());
-    for (Node node : nodes) {
-      if (node.m_y == y) {
-        return node;
-      }
-    }
-    return nodes.get(0);
-  }
-  
-  
-  
   void draw(int globalZoom, int nodeZoom) {
     
     background(m_windowBackgroundColor);
@@ -511,6 +553,11 @@ public class Model {
       m_menuVisible = false;
     }
     
+    // update ShowSamples data if required
+    if (m_interactionMode == InteractionMode.ShowSamples) {
+      updateShowSamples();
+    }
+    
     // draw menu if required
     if (m_menuVisible) {
       fill(m_menuBackgroundColor);
@@ -523,6 +570,9 @@ public class Model {
         case MultiNodeBrushing:
           mode = "Multi Node";
           break;
+        case ShowSamples:
+          mode = "Show Samples";
+          break;
         default:
           mode = "(no mode set)";
       }
@@ -533,6 +583,124 @@ public class Model {
     }
   }
   
+  
+  void updateShowSamples() {
+    // In ShowSample interaction mode, we need to update a timer at each frame, and, at regular intervals,
+    // chose a new sample from the currently selected samples to add to the display list. We also need
+    // to remove old samples from the end of the list.
+    
+    if (m_ssAutoUpdate) {
+      m_ssTimer++;
+      if (m_ssTimer >= m_ssTimerReset) {
+        m_ssTimer = 0;  
+        if (!m_ssSamplesToDisplay.isEmpty()) {
+          m_ssDisplayIdx = (m_ssDisplayIdx+1) % m_ssSamplesToDisplay.size();
+        }  
+      }
+    }
+  }
+
+  
+  void updateSelectedSampleList() {
+    // Update m_allSelectedSamples to contain a list of all Samples currently selected by the range selectors
+    // of all focal nodes
+    
+    m_allSelectedSamples.clear();
+    boolean firstNode = true;
+    
+    checkAllNodesSafe();
+    for (Node node : m_allNodes) {
+      if (node.hasFocus()) {
+        if (firstNode) {
+          m_allSelectedSamples.addAll(node.getSamplesInRange());
+        }
+        else {
+          m_allSelectedSamples.retainAll(node.getSamplesInRange()); // keep the intersection of this and previous sets
+        }
+      }
+      firstNode = false;
+    }
+
+    // Reset m_ssSamplesToDisplay to be an ArrayList corresponding to the new m_allSelectedSamples HashSet
+    m_ssSamplesToDisplay = new ArrayList<Integer>(m_allSelectedSamples);
+    Collections.shuffle(m_ssSamplesToDisplay);
+    m_ssDisplayIdx = 0;
+    
+  }
+  
+  
+  void showSamplesAutoSpeedUp() {
+    // Decrease the time between displaying new samples in ShowSamples mode when under automatic control
+    m_ssAutoUpdate = true;
+    if (m_ssTimerReset > 1) {
+      m_ssTimerReset--;
+    }
+  }
+  
+  
+  void showSamplesAutoSlowDown() {
+    // Increase the time between displaying new samples in ShowSamples mode when under automatic control
+    m_ssAutoUpdate = true;
+    if (m_ssTimerReset < 100) {
+      m_ssTimerReset++;
+    }
+  }
+  
+  
+  void showSamplesStepBackward() {
+    // Reverse to previous sample in ShowSamples mode when under manual user control
+    m_ssAutoUpdate = false;
+    m_ssDisplayIdx = (m_ssDisplayIdx <= 0) ? (m_ssSamplesToDisplay.size() - 1) : (m_ssDisplayIdx - 1);
+  }
+
+  
+  void showSamplesStepForward() {
+    // Step forward to the next sample in ShowSamples mode when under manual user control
+    m_ssAutoUpdate = false;
+    m_ssDisplayIdx = (m_ssDisplayIdx+1) % m_ssSamplesToDisplay.size();
+  }
+  
+  
+  void showSamplesDecrementNumSamples() {
+    // Decrease the number of samples to be displayed in ShowSamples mode
+    if (m_ssMaxSamplesToDisplay > 1) {
+      m_ssMaxSamplesToDisplay--;
+      resetSampleHueList();
+    }
+  }
+  
+  
+  void showSamplesIncrementNumSamples() {
+    // Increase the number of samples to be displayed in ShowSamples mode
+    if ((m_ssMaxSamplesToDisplay < 100) && (m_ssMaxSamplesToDisplay < m_allSelectedSamples.size())) {
+      m_ssMaxSamplesToDisplay++;
+      resetSampleHueList();
+    }
+  }
+  
+  
+  int getSampleHue(int sampleDisplayIdx) {
+    // returns a Hue value between 0 and 255 to be used for displaying a specific sample in ShowSamples mode,
+    // from the current palatte defined in m_ssSampleHues according to the index number passed in
+    
+    assert(sampleDisplayIdx < m_ssSampleHues.size());
+    
+    return m_ssSampleHues.get(sampleDisplayIdx);
+  }
+  
+  
+  void resetSampleHueList() {
+    // Repopulate the m_ssSampleHues list with a palette of hues equally spaced between 0 and 255 according
+    // to the number of samples specified in m_ssMaxSamplesToDisplay. Then randomly shuffle the order of
+    // the palatte to remove any correlation between sameple order and color
+    
+    m_ssSampleHues.clear();
+    for (int i = 0; i < m_ssMaxSamplesToDisplay; i++) {
+      m_ssSampleHues.add((i*255)/m_ssMaxSamplesToDisplay);
+    }
+    Collections.shuffle(m_ssSampleHues);
+  }
+
   
   void mousePressed() {
     checkAllNodesSafe();
@@ -660,62 +828,7 @@ public class Model {
       }
     }
   }
-  
-  
-  // OLD STUFF.....
 
-  /*
-  void insert(Number... data) {
-    ArrayList<Number> row = new ArrayList<Number>();
-    // TODO: check against m_fields? throw exception if not the same??
-    for (Number num : data) {
-      row.add(num);
-    }
-    m_data.add(row);
-  }
-  */
-  
-  /*
-  void normalise() {
-    for (int i=0; i<m_fields.length; i++) {
-      println(m_fields[i].toString());
-    }
-  }
-  */
-    
-  /*
-  int[] getColMinMax(int col) {
-    int[] minmax = new int[2];
-    
-    if (col < 0 || col > m_fields.length) {
-      println("Something is very wrong in getColMinMax!");
-      return minmax;
-    }
-    if (m_fields[col]... //is col column in original data or in m_data? need to check if is int
-    
 
-    minmax[0] =  2147483647; // min
-    minmax[1] = -2147483648; // max
-    for (ArrayList<Number> row : m_data) {
-      if (row.get(col).toInt() < minmax[0]) {
-        minmax[0] = row.get(col);
-      }
-      else if (row.get(col) > minmax[1]) {
-        minmax[1] = row.get(col);
-      }
-    }
-    if (minmax[0] > minmax[1]) {
-      // this would only happen if no data was processed
-      minmax[0] = minmax[1];
-    }
-    return minmax;
-  }
-  */  
-  
-  /*
-  ArrayList<Number> getRawData(DataField field) {
-    return m_data.get(field.m_dataIdx);
-  }
-  */  
 }
 

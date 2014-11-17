@@ -10,9 +10,10 @@
 */
 
 // N.B. When specifying the loader file, loader doesn't seem to cope with filenames that are symbolic links!
+String modelLoaderFile = "auto-mpg-loader.xml";
 //String modelLoaderFile = "breast-cancer-wisconsin-loader.xml";
 //String modelLoaderFile = "pertussis-data-reduced-n-1000-seed-1-clean-loader.xml";
-String modelLoaderFile = "influenza-data-31-20-n-1000-clean-loader.xml";
+//String modelLoaderFile = "influenza-data-31-20-n-1000-clean-loader.xml";
 
 int globalZoom = 100;
 int nodeZoom = 100;
@@ -64,66 +65,64 @@ void mouseDragged() {
 
 
 void keyPressed() {
-  switch (key) {
-    case '+': {
-      if (globalZoom < 1000) { 
-        globalZoom++;
-        redraw();
-      }
-      break;
-    }
-    case '-': {
-      if (globalZoom > 1) {
-        globalZoom--;
-        redraw();
-      }
-      break;
-    }
-    case '1':
-      model.setInteractionMode(InteractionMode.SingleNodeBrushing);
-      break;
-    case '2':
-      model.setInteractionMode(InteractionMode.MultiNodeBrushing);
-      break;
-    case 'L':
-    case 'l':
-      model.linkRequest();
-      break;
-    default:
-      break;
-  }
-}
-
-
-/*
-void connectFocalDials() {
-  ArrayList<InputDial> focalinputs = new ArrayList<InputDial>();
-  ArrayList<OutputDial> focaloutputs = new ArrayList<OutputDial>();
-  for (InputDial idial : idials) {
-    if (idial.hasFocus()) {
-      focalinputs.add(idial);
+  if (key == CODED) {
+    switch (keyCode) {
+      case UP:
+        model.showSamplesAutoSpeedUp();
+        break;
+      case DOWN:
+        model.showSamplesAutoSlowDown();
+        break;
+      case LEFT:
+        model.showSamplesStepBackward();
+        break;
+      case RIGHT:
+        model.showSamplesStepForward();
+        break;
+      default:
+        break;
     }
   }
-  for (OutputDial odial : odials) {
-    if (odial.hasFocus()) {
-      focaloutputs.add(odial);
-    }
-  }
-  if (focalinputs.size() > 0 && focaloutputs.size() > 0) {
-    // TODO...
-    // for the time being, we are only connecting the first focal input with the first focal output 
-    if (focalinputs.get(0).isDirectlyConnected(focaloutputs.get(0))) {
-      focalinputs.get(0).disconnect(focaloutputs.get(0));
-    }
-    else {
-      focalinputs.get(0).connect(focaloutputs.get(0));
-    }
-    //println("We're in business!");
-  }
-  /*
   else {
-    println("Close, but no cigar!");
+    switch (key) {
+      case '+': {
+        if (globalZoom < 1000) { 
+          globalZoom++;
+          redraw();
+        }
+        break;
+      }
+      case '-': {
+        if (globalZoom > 1) {
+          globalZoom--;
+          redraw();
+        }
+        break;
+      }
+      case '1':
+        model.setInteractionMode(InteractionMode.SingleNodeBrushing);
+        break;
+      case '2':
+        model.setInteractionMode(InteractionMode.MultiNodeBrushing);
+        break;
+      case '3':
+        model.setInteractionMode(InteractionMode.ShowSamples);
+        break;
+      case 'L':
+      case 'l':
+        model.linkRequest();
+        break;
+      case 'Z':
+      case 'z':
+        model.showSamplesDecrementNumSamples();
+        break;
+      case 'X':
+      case 'x':
+        model.showSamplesIncrementNumSamples();
+        break;
+      default:
+        break;
+    }
   }
-  * /
 }
-*/
+

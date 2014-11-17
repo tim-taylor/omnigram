@@ -58,7 +58,6 @@ class HistogramBin {
     
     switch (m_node.m_model.m_visualisationMode) {
       case FullAutoHeightAdjust: {
-        //m_h = (int)(0.004*(float)(dh * m_numSamples));  // TO DO.. sort out some proper scaling factor
         m_h = (int)((nodeSF * (float)(dh * m_numSamples))/((float)numSamplesAll));
         m_w = dw;
         // TO DO: need to potentially adjust m_node.m_hgH, plus adjust positions of other nodes
@@ -138,7 +137,8 @@ class HistogramBin {
       
       switch (m_node.m_model.m_interactionMode) {
         case SingleNodeBrushing: 
-        case MultiNodeBrushing: {
+        case MultiNodeBrushing:
+        case ShowSamples: {
           if (m_node.m_bHasFocus) {
             // this is the focal node for single-node brushing
             if (inSelectedRange()) {
@@ -153,6 +153,56 @@ class HistogramBin {
             // this is a non-focal node for single-node brushing
             drawBrushedBin((m_node.m_model.m_interactionMode == InteractionMode.SingleNodeBrushing) ? 1 : m_node.m_hgNumBrushes);
           }
+          
+          // in ShowSamples mode, draw the individual samples
+          if (m_node.m_model.m_interactionMode == InteractionMode.ShowSamples) {
+            pushStyle();
+            
+            colorMode(HSB);
+            stroke(0);
+            int numInBin = 0;
+            int dIdx = m_node.m_model.m_ssDisplayIdx;
+            ArrayList<Integer> samples = m_node.m_model.m_ssSamplesToDisplay;
+            int numSamplesToDisplay = m_node.m_model.m_ssMaxSamplesToDisplay;
+            if (!samples.isEmpty()) {
+              for (int i = 0; i < numSamplesToDisplay; i++) {
+                int sID = samples.get( (dIdx+i) % (samples.size()) );
+                int sIdx = m_sampleIDs.indexOf(sID);
+                if (sIdx >= 0) {
+                  numInBin++;
+                  int y = m_y - (numInBin*m_w) + m_w/2;
+                  color c = color(m_node.m_model.getSampleHue(i), 255, 255);
+                  fill(c);
+                  ellipse(m_x + (m_w/2), y, m_w, m_w);
+                }
+              }
+            }
+            
+            /*
+            stroke(0);
+            int age = 0;
+            int numInBin = 0;        
+            for (Integer sID : m_node.m_model.m_ssSamplesToDisplay) {
+              int idx = m_sampleIDs.indexOf(sID);
+              if (idx >= 0) {
+                numInBin++;
+                //int y = m_y - (int)(((float)idx / (float)m_numSamples) * (float)m_h);
+                int y = m_y - (numInBin*m_w) + m_w/2;
+                int r = 128 + sID % 128;
+                int g = 128 + (sID * 3) % 128;
+                int b = 128 + (sID * 5) % 128;
+                fill(r,g,b);
+                //int alpha = (255 * age) / m_node.m_model.m_ssMaxSamplesToDisplay;
+                //fill(#FFFFFF, 255 /*alpha* /);
+                ellipse(m_x + (m_w/2), y, m_w, m_w);
+              }
+              age++;          
+            }
+            */
+            
+            popStyle();
+          }
+          
           break;
         }
         case Unassigned:
