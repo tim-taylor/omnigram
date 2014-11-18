@@ -43,11 +43,11 @@ public class Model {
   ArrayList<Integer> m_ssSamplesToDisplay; // list of currently displayed SampleIDs, last in list is the most recent
   int m_ssDisplayIdx = 0;                  // index of first current displayed sample in m_ssSamplesToDisplay
   ArrayList<Integer> m_ssSampleHues;       // list of color hues used for displaying samples
-
   
   // mode of visualisation
   VisualisationMode m_visualisationMode = VisualisationMode.FullAutoHeightAdjust;
-  boolean m_visTiled = true; // tiled or continuous?
+  boolean m_visTiled = true;               // display histogram bins as tiled or continuous?
+  boolean m_showMedians = false;           // display histogram medians rather than means in range selector bar?
   
   // global information about appearance
   int   m_globalZoom = 100;
@@ -68,6 +68,8 @@ public class Model {
   PFont   m_smallFont;
   PFont   m_mediumFont;
   int     m_defaultInterNodeGapV = 20;
+  String  m_strMu = "\u03BC";
+  String  m_strXTilde = "x\u0303";
 
   
   //////////// METHODS //////////////////
@@ -220,7 +222,7 @@ public class Model {
       if (defaultH != refH) {
         float sf = (float)refH / (float)defaultH;
         for (Node node : m_allNodes) {
-          node.setH((int)(((float)node.getH())*sf), true);
+          node.setH((int)(((float)node.getH())*sf), true, true);
         }
       }
       
@@ -606,19 +608,19 @@ public class Model {
     // of all focal nodes
     
     m_allSelectedSamples.clear();
-    boolean firstNode = true;
+    boolean firstFocalNode = true;
     
     checkAllNodesSafe();
     for (Node node : m_allNodes) {
       if (node.hasFocus()) {
-        if (firstNode) {
+        if (firstFocalNode) {
           m_allSelectedSamples.addAll(node.getSamplesInRange());
+          firstFocalNode = false;
         }
         else {
           m_allSelectedSamples.retainAll(node.getSamplesInRange()); // keep the intersection of this and previous sets
         }
       }
-      firstNode = false;
     }
 
     // Reset m_ssSamplesToDisplay to be an ArrayList corresponding to the new m_allSelectedSamples HashSet
@@ -650,14 +652,19 @@ public class Model {
   void showSamplesStepBackward() {
     // Reverse to previous sample in ShowSamples mode when under manual user control
     m_ssAutoUpdate = false;
-    m_ssDisplayIdx = (m_ssDisplayIdx <= 0) ? (m_ssSamplesToDisplay.size() - 1) : (m_ssDisplayIdx - 1);
+    if (m_ssSamplesToDisplay.isEmpty()) {
+      m_ssDisplayIdx = 0;
+    }
+    else {
+      m_ssDisplayIdx = (m_ssDisplayIdx <= 0) ? (m_ssSamplesToDisplay.size() - 1) : (m_ssDisplayIdx - 1);
+    }
   }
 
   
   void showSamplesStepForward() {
     // Step forward to the next sample in ShowSamples mode when under manual user control
     m_ssAutoUpdate = false;
-    m_ssDisplayIdx = (m_ssDisplayIdx+1) % m_ssSamplesToDisplay.size();
+    m_ssDisplayIdx = m_ssSamplesToDisplay.isEmpty() ? 0 : (m_ssDisplayIdx+1) % m_ssSamplesToDisplay.size();
   }
   
   
@@ -827,6 +834,12 @@ public class Model {
         link.m_node1.adjustRangeSelector(node, link.m_strength);
       }
     }
+  }
+  
+  
+  void toggleMeanMedian() {
+    // switch between display of means and medians in the nodes
+    m_showMedians = !m_showMedians;
   }
 
 

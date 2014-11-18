@@ -24,6 +24,7 @@ class HistogramBin {
   int m_y; // y pos of bottom-left corner of bin, relative to top edge of histogram window
   int m_w; // width of bin
   int m_h; // height of bin
+  int m_referenceH; // reference height for the bin, used when rescaling
   
   HistogramBin(Node node, int idx, int numSamples, ArrayList<Integer> sampleIDs, int x, int y) {
     m_node = node;
@@ -58,8 +59,9 @@ class HistogramBin {
     
     switch (m_node.m_model.m_visualisationMode) {
       case FullAutoHeightAdjust: {
-        m_h = (int)((nodeSF * (float)(dh * m_numSamples))/((float)numSamplesAll));
         m_w = dw;
+        m_h = (int)((nodeSF * (float)(dh * m_numSamples))/((float)numSamplesAll));
+        m_referenceH = m_h;
         // TO DO: need to potentially adjust m_node.m_hgH, plus adjust positions of other nodes
         break;
       }
@@ -78,13 +80,23 @@ class HistogramBin {
   }
   
   
+  void setX(int x) {
+    m_x = x;
+  }
+  
+  
   void setY(int y) {
     m_y = y;
   }
   
   
-  void scaleH(float sf) {
-    m_h = (int)(((float)m_h) * sf);
+  void scaleH(float sf, boolean resetReferenceH) {
+    //m_h = (int)(((float)m_h) * sf);
+    m_h = (int)(((float)m_referenceH) * sf);
+    if (resetReferenceH) {
+      m_referenceH = m_h;
+    }
+    //println("bin.scaleH: sf="+sf+", m_h="+m_h+", m_refH="+m_referenceH);
   }
   
   
@@ -139,7 +151,7 @@ class HistogramBin {
         case SingleNodeBrushing: 
         case MultiNodeBrushing:
         case ShowSamples: {
-          if (m_node.m_bHasFocus) {
+          if (m_node.hasFocus()) {
             // this is the focal node for single-node brushing
             if (inSelectedRange()) {
               fill(m_focalInRangeSelFillColor);
@@ -157,6 +169,21 @@ class HistogramBin {
           // in ShowSamples mode, draw the individual samples
           if (m_node.m_model.m_interactionMode == InteractionMode.ShowSamples) {
             pushStyle();
+            
+            /*
+            if (m_node.hasFocus()) {
+              println("Hello from "+m_node.m_name);
+              println(m_node.m_model.m_ssSamplesToDisplay.size());
+              println(m_node.m_model.m_allSelectedSamples.size());
+              println(m_node.m_model.m_ssMaxSamplesToDisplay);
+              println(m_node.m_model.m_ssDisplayIdx);
+            }
+            */
+            
+            if (!m_node.hasFocus()) {
+              fill(255, 220);
+              rect(m_x, m_y-m_h, m_w, m_h);
+            }
             
             colorMode(HSB);
             stroke(0);
@@ -177,28 +204,6 @@ class HistogramBin {
                 }
               }
             }
-            
-            /*
-            stroke(0);
-            int age = 0;
-            int numInBin = 0;        
-            for (Integer sID : m_node.m_model.m_ssSamplesToDisplay) {
-              int idx = m_sampleIDs.indexOf(sID);
-              if (idx >= 0) {
-                numInBin++;
-                //int y = m_y - (int)(((float)idx / (float)m_numSamples) * (float)m_h);
-                int y = m_y - (numInBin*m_w) + m_w/2;
-                int r = 128 + sID % 128;
-                int g = 128 + (sID * 3) % 128;
-                int b = 128 + (sID * 5) % 128;
-                fill(r,g,b);
-                //int alpha = (255 * age) / m_node.m_model.m_ssMaxSamplesToDisplay;
-                //fill(#FFFFFF, 255 /*alpha* /);
-                ellipse(m_x + (m_w/2), y, m_w, m_w);
-              }
-              age++;          
-            }
-            */
             
             popStyle();
           }
@@ -387,6 +392,39 @@ class HistogramBin {
     }
     
     return total;
+  }
+  
+   
+  ArrayList<Float> getSelectedValues() {
+    // Return a list of values of all samples in this bin.
+    return getSelectedValues(false);
+  }
+  
+  
+  ArrayList<Float> getSelectedValues(boolean brushedOnly) {
+    // Return a list of values of samples in this bin.
+    // If brushedOnly==true, only include brushed samples (with numMiss==0), otherwise include all samples.
+    
+    ArrayList<Float> values = new ArrayList<Float>();
+    
+    ArrayList<ArrayList<Number>> dataArray = m_node.m_model.m_data;
+    int col = m_node.m_dataArrayCol;
+    
+    if (brushedOnly) {
+      for (Integer id : m_sampleIDs) {
+        if (sampleBrushed(id)) {
+        values.add(dataArray.get(id).get(col).floatValue());
+        }
+      }
+    }
+    else {
+      for (Integer id : m_sampleIDs) {
+        values.add(dataArray.get(id).get(col).floatValue());
+      }
+    }
+    
+    return values;    
+
   }
   
 }

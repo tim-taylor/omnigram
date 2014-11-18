@@ -112,6 +112,10 @@ void keyPressed() {
       case 'l':
         model.linkRequest();
         break;
+      case 'M':
+      case 'm':
+        model.toggleMeanMedian();
+        break;
       case 'Z':
       case 'z':
         model.showSamplesDecrementNumSamples();

@@ -7,6 +7,7 @@ public abstract class Node {
   // Widget appearance and position
   int m_nodeW;          // width of Node widget
   int m_nodeH;          // height of Node widget
+  int m_referenceH;     // reference height of Node, used when rescaling
   int m_x;              // x position of top-left corner
   int m_y;              // y position of top-left corner
   int m_nodeZoom = 100;
@@ -36,10 +37,13 @@ public abstract class Node {
   boolean m_rsLeftHandlePressed;
   boolean m_rsRightHandlePressed;
   boolean m_rsBarPressed;
+  boolean m_lbNodeResizeHandlePressed;
   int m_mousePressX;          // records x pos of where mouse was last pressed
   int m_mousePressY;          // records y pos of where mouse was last pressed
   int m_rsMousePressLLDeltaX; // records distance from m_mousePressX to left side of left handle when mouse last pressed
   int m_rsMousePressRRDeltaX; // records distance from m_mousePressX to right side of right handle when mouse last pressed
+  int m_lbNodeResizeDeltaX;   // records distance from from mouse press to left edge of node when mouse pressed to resize node
+  int m_lbNodeResizeDeltaY;   // records distance from from mouse press to bottom edge of node when mouse pressed to resize node
   
   // References to data associated with this Node
   Model m_model;      // reference to the associated Model
@@ -91,6 +95,7 @@ public abstract class Node {
     m_parentIDs = parentIDs;
     m_nodeW = getDefaultW();
     m_nodeH = getDefaultH();
+    m_referenceH = m_nodeH;
     m_hgNumBins = 10;
     m_hgBins = new ArrayList<HistogramBin>();
     m_hgH = m_nodeH - m_mbH - m_rsH - m_lbH;
@@ -111,10 +116,13 @@ public abstract class Node {
     m_rsLeftHandlePressed = false;
     m_rsRightHandlePressed = false;
     m_rsBarPressed = false;
+    m_lbNodeResizeHandlePressed = false;
     m_mousePressX = 0;
     m_mousePressY = 0;
     m_rsMousePressLLDeltaX = 0;
     m_rsMousePressRRDeltaX = 0;
+    m_lbNodeResizeDeltaX = 0;
+    m_lbNodeResizeDeltaY = 0;
     m_x = (int)random(0, width - m_nodeW);
     m_y = (int)random(0, height - m_nodeH);
     m_brushLinkUnderConstruction = false;
@@ -131,24 +139,55 @@ public abstract class Node {
   }
   
   
-  void setH(int h, boolean resizeBins) {
+  void setH(int h, boolean resizeBins, boolean resetReferenceH) {
      
-    int oldHistH = m_nodeH - m_mbH - m_rsH - m_lbH - m_hgHeadH - m_hgFootH;
-    int newHistH = h - m_mbH - m_rsH - m_lbH - m_hgHeadH - m_hgFootH;
+    int nonHistH = m_mbH + m_rsH + m_lbH + m_hgHeadH + m_hgFootH; // combined height of everything except main histogram area
+    //int oldHistH = m_nodeH - nonHistH;
+    int oldHistH = m_referenceH - nonHistH;
+    int newHistH = h - nonHistH;
     float histSF = (float)newHistH / (float)oldHistH;
     
     m_nodeH = h;
     m_hgH = m_nodeH - m_mbH - m_rsH - m_lbH;
+    
+    if (resetReferenceH) {
+      m_referenceH = h;
+    }
+    
     for (HistogramBin bin : m_hgBins) {
       bin.setY(m_hgH - m_hgFootH);
     }
  
     if (resizeBins) {
       for (HistogramBin bin : m_hgBins) {
-        bin.scaleH(histSF);
+        bin.scaleH(histSF, resetReferenceH);
       }      
     }
     
+  }
+  
+  
+  void setW(int w) {
+    // Attempt to change the node's width to the value specified.
+    // The width of individual bins is not changed, so the minimum width allowed is
+    // determined by the number of bins and their widths.
+
+    if (w > 0) {
+      // work out the inter-bin gap that the specified width would entail
+      int gap = (int)((float)(w - m_hgNumBins*m_hgDefaultBinW) / (float)(m_hgNumBins+1));
+      gap = constrain(gap, 0, 100); // now constrain the gap to a sensible number
+      
+      // adjust the x position of each bin
+      int binx = gap;   
+      for (HistogramBin bin : m_hgBins) {
+        bin.setX(binx);
+        binx += bin.m_w + gap;
+      }
+      
+      // and finally set the node width according to how the bins are now spaced
+      // (which should be equal to w unless the gap was constrained)
+      m_nodeW = binx;
+    }
   }
   
   
@@ -246,7 +285,7 @@ public abstract class Node {
     // if the max bin height is greater than the height allowed by the node, increase height of node to fit
     int newH = m_mbH + m_rsH + m_lbH + m_hgHeadH + maxH + m_hgFootH;
     if (newH > m_nodeH) {
-      setH(newH, false);    
+      setH(newH, false, true);    
     }
     
   }
@@ -335,7 +374,10 @@ public abstract class Node {
 
   
   void drawRangeSelector() {
+    
+    pushStyle();
     pushMatrix();
+    
     translate(0, m_mbH+m_hgH);
     fill(m_rsBackgroundColor);
     rect(0, 0, m_nodeW, m_rsH);
@@ -351,56 +393,84 @@ public abstract class Node {
       // draw left handle
       fill(m_rsLeftHandlePressed ? m_rsHandlePressedColor : m_rsHandleColor);
       rect(llx, 0, lrx-llx, m_rsH);
-      // draw right handle
-      fill(m_rsRightHandlePressed ? m_rsHandlePressedColor : m_rsHandleColor);
-      rect(hlx, 0, hrx-hlx, m_rsH);
+      //
+      if (m_rsLow == m_rsHigh) {
+        // left and right handles are in the same place, so
+        // draw partitions on handle for expand right, drag and expand left
+        stroke(m_rsBackgroundColor);
+        line(llx, m_rsH/3, lrx, m_rsH/3);
+        line(llx, (2*m_rsH)/3, lrx, (2*m_rsH)/3);
+        noStroke();
+      }
+      else {
+        // draw right handle
+        fill(m_rsRightHandlePressed ? m_rsHandlePressedColor : m_rsHandleColor);
+        rect(hlx, 0, hrx-hlx, m_rsH);
+      } 
       
-      // draw the mean value of the selected range
+      // draw the mean or median value of the selected range
       if (m_rsLow != m_rsHigh) {
-        float meanv = getMeanSelectedValue(!m_bHasFocus); // mean value of samples that lie in the currently selected range
+        float mv = (m_model.m_showMedians) ? getMedianSelectedValue(!m_bHasFocus) : getMeanSelectedValue(!m_bHasFocus);
+          // mv is the mean/median value of samples that lie in the currently selected range
         float lowv  = getHistogramBinLowVal(m_rsLow).floatValue();   // low boundary of lowest bin in selected range
         float highv = getHistogramBinHighVal(m_rsHigh).floatValue(); // high boundary of highest bin in selected range
+        
+        if (mv < 0.0) { // getMean and getMedian return a negative number if there are no selected samples
+          mv = lowv;
+        }
+        
         int lmx = (llx+lrx)/2;
         int hmx = (hlx+hrx)/2;
-        int meanx = lmx + (int)(((meanv-lowv)*(float)(hmx-lmx))/(highv-lowv));
+        int mx = lmx + (int)(((mv-lowv)*(float)(hmx-lmx))/(highv-lowv));
         int circ = (int)(0.5 * (float)m_rsH);
         fill(m_bHasFocus ? m_rsFocalMeanValColor : m_rsNonFocalMeanValColor);
-        ellipse(meanx, m_rsH/2, circ, circ);
+        ellipse(mx, m_rsH/2, circ, circ);
         
         // print a mu character in the middle of the circle representing the mean value
         textFont(m_model.m_smallFont, 11);
         fill(0xFFFFFFFF);
         textAlign(CENTER);
-        text("\u03BC", meanx, (m_rsH*9)/16);      
-        
-        //
-        // TO DO... TEMP DEBUGGING CODE
-        if (m_id == 23) {
-          println(m_name+", meanv="+meanv+", lowv="+lowv+", highv="+highv+", lmx="+lmx+", hmx="+hmx+", meanx="+meanx+"  m_id="+m_id+", m_rsLow="+m_rsLow+", m_rsHigh="+m_rsHigh);
+        if (m_model.m_showMedians) {
+          text(m_model.m_strXTilde, mx, (m_rsH*11)/16);
         }
-        //
+        else {
+          text(m_model.m_strMu, mx, (m_rsH*9)/16);
+        }
       }
       
     }
     
     popMatrix();
+    popStyle();
   }
   
   
   void drawLabelBar() {
+    pushStyle();
     pushMatrix();
     translate(0, m_mbH+m_hgH+m_rsH);
+    // draw background
     fill(m_lbBackgroundColor);
-    rect(0, 0, m_nodeW, m_lbH);    
+    rect(0, 0, m_nodeW, m_lbH);
+    // write node name    
     textFont(m_model.m_mediumFont, 16);
     fill(m_lbForegroundColor);
     textAlign(CENTER);
     text(m_name, m_nodeW/2, m_lbH-8);
+    // draw node resize graphic
+    stroke(m_rsBackgroundColor); // a bit of color sharing going on here
+    strokeCap(PROJECT);
+    for (int l=0; l<4; l++) {
+      line( m_nodeW-(((4-l)*m_lbH)/8), m_lbH, m_nodeW, 1+(((4+l)*m_lbH)/8) );
+    }
+    // and finally revert to previous state
     popMatrix();
+    popStyle();
   }
   
   
   void setFullRange() {
+    // set the high and low range selectors to their extreme values
     m_rsLow = 0;
     m_rsHigh = m_hgNumBins-1;
   }
@@ -464,13 +534,19 @@ public abstract class Node {
           if (m_rsLow == m_rsHigh) {
             // first deal with special case where both range selectors are in the same position
             if (scaledMouseX() >= m_x + llx && scaledMouseX() <= m_x + lrx) {
-              if (scaledMouseY() <= (m_y + m_mbH + m_hgH + (m_rsH/2))) {
-                // is top half of handle pressed, call it a right handle press
+              if (scaledMouseY() <= (m_y + m_mbH + m_hgH + (m_rsH/3))) {
+                // is top third of handle pressed, call it a right handle press
                 m_rsRightHandlePressed = true;
               }
-              else {
-                // else if bottom half pressed, call it a left handle press
+              else if (scaledMouseY() >= (m_y + m_mbH + m_hgH + ((2*m_rsH)/3))) {
+                // else if bottom third pressed, call it a left handle press
                 m_rsLeftHandlePressed = true;
+              }
+              else {
+                // else handle pressed in middle, so treat it as a press of the rs bar for dragging
+                m_rsBarPressed = true;
+                m_rsMousePressLLDeltaX = m_mousePressX - (m_x + llx);
+                m_rsMousePressRRDeltaX = (m_x + hrx) - m_mousePressX;
               }
             }
           }
@@ -495,7 +571,19 @@ public abstract class Node {
       }
       else if (scaledMouseY() >= m_y + m_mbH + m_hgH + m_rsH) {
         ///////////// MOUSE IS IN THE LABEL BAR AREA ///////////////////////////////////////////////
-        m_bNodeDragged = true;
+        
+        // calculate whether mouse is over the node resize button, and act accordingly
+        int rl = m_lbH/2; // dimension of the resize button
+        int dx = scaledMouseX() - (m_x + m_nodeW - rl);
+        int dy = scaledMouseY() - (m_y + m_mbH + m_hgH + m_rsH + rl);
+        if ((dx >= 0) && (dy >= 0) && ((rl-dx) <= dy)) {
+          m_lbNodeResizeHandlePressed = true;
+          m_lbNodeResizeDeltaX =  (m_x + m_nodeW) - scaledMouseX();
+          m_lbNodeResizeDeltaY = (m_y + m_nodeH) - scaledMouseY();
+        }
+        else {
+          m_bNodeDragged = true;
+        }
       }
     }
   }
@@ -506,6 +594,7 @@ public abstract class Node {
     m_rsLeftHandlePressed = false;
     m_rsRightHandlePressed = false;
     m_rsBarPressed = false;
+    m_lbNodeResizeHandlePressed = false;
   }
 
   
@@ -614,6 +703,15 @@ public abstract class Node {
       // of any nodes that are currently linked to this one
       m_model.adjustBrushLinkedNodes(this);
     }
+    else if (m_lbNodeResizeHandlePressed) {
+      ///////////// NODE RESIZE HANDLE DRAGGED /////////////////////////
+      
+      if ((scaledMouseX() > m_x + 0) && (scaledMouseY() > m_y + m_mbH + m_rsH + m_hgHeadH + m_hgFootH + m_lbH )) {
+        setH(scaledMouseY() - m_y + m_lbNodeResizeDeltaY, true, false);
+        setW(scaledMouseX() - m_x + m_lbNodeResizeDeltaX);
+      }  
+      
+    }
     
     if (m_rsLow != rsLowOld || m_rsHigh != rsHighOld) {
       switch(m_model.m_interactionMode) {
@@ -640,6 +738,7 @@ public abstract class Node {
   
   
   ArrayList<Integer> getSelectedSampleIDs() {
+    // return a list of sampleIDs of all samples within the selected range
     ArrayList<Integer> list = new ArrayList<Integer>();
     for (int i=m_rsLow; i<=m_rsHigh; i++) {
       list.addAll(m_hgBins.get(i).m_sampleIDs);
@@ -743,21 +842,56 @@ public abstract class Node {
   float getMeanSelectedValue(boolean brushedOnly) {
     // Calculate the mean value of samples in selected bins.
     // If brushedOnly==true, only count brushed samples (with numMiss==0), otherwise count all samples.
+    // If there are no relevant samples, return -1.0.
     
     float total = 0;
     int numSamples = 0;
     for (int b = m_rsLow; b <= m_rsHigh; b++) {
-      total += m_hgBins.get(b).getTotalValues(brushedOnly);
-      if (m_id==23) {
-        println("mean calc: total for bin "+b+"="+(m_hgBins.get(b).getTotalValues(brushedOnly)) + ", numS=" + (m_hgBins.get(b).numSamples()));
-      }      
+      total += m_hgBins.get(b).getTotalValues(brushedOnly);    
       numSamples += (brushedOnly ? m_hgBins.get(b).numBrushed() : m_hgBins.get(b).numSamples());
     }
-    if (m_id==23) {
-      println("mean calc: total="+total+", numS="+numSamples);
+    
+    if (numSamples == 0) {
+      return -1.0;
     }
+
     return total / (float)numSamples;
-  }  
+  }
+  
+  
+  float getMedianSelectedValue() {
+    // Calculate the median value of samples in selected bins
+    return getMedianSelectedValue(false);
+  }
+  
+  
+  float getMedianSelectedValue(boolean brushedOnly) {
+    // Calculate the median value of samples in selected bins.
+    // If brushedOnly==true, only count brushed samples (with numMiss==0), otherwise count all samples.
+    // If there are no relevant samples, return -1.0.
+    
+    ArrayList<Float> selectedValues = new ArrayList<Float>();
+
+    for (int b = m_rsLow; b <= m_rsHigh; b++) {
+      selectedValues.addAll(m_hgBins.get(b).getSelectedValues(brushedOnly));
+    }
+    
+    if (selectedValues.isEmpty()) {
+      return -1.0;
+    }
+    
+    Collections.sort(selectedValues);
+    
+    if (selectedValues.size() % 2 == 1) {
+      return selectedValues.get((selectedValues.size()+1)/2-1);
+    }
+    else
+    {
+      float lower = selectedValues.get(selectedValues.size()/2-1);
+      float upper = selectedValues.get(selectedValues.size()/2);
+      return ((lower + upper) / 2.0);
+    }
+  }
   
   
   int scaledMouseX() {
@@ -804,10 +938,6 @@ public abstract class Node {
     else {
       thisTargetRSPos = (1.0 + (strength * otherRSPosFrac)) * (float)thisMax;
     }
-    
-    //println("Adjusting linked nodes "+m_name+" and "+node.m_name);
-    //println("m_rsLow="+m_rsLow+", m_rsHigh="+m_rsHigh+", thisMax="+thisMax);
-    //println("oPosFrac = "+otherRSPosFrac+", thisCurPos="+thisCurrentRSPos+", thisTargPos="+thisTargetRSPos);      
     
     int delta = round(thisTargetRSPos - thisCurrentRSPos);
     
