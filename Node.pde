@@ -965,6 +965,47 @@ public abstract class Node {
     }
     return list;
   }
+  
+  
+  void matchSampleBinsToColors(ArrayList<Integer> sampleIDs, ArrayList<Integer> hues) {
+    // Takes a list of sampleIDs as input, and a list of hues to be returned as output. This list of
+    // hues is first emptied. Then, so through each sample, and add an entry at the corresponding
+    // position in the hue list according to the bin in which that sample is found.
+    
+    // First, empty the list of hues to start with a clean slate
+    hues.clear();
+    
+    // Now create a hue for each bin in the histogram
+    ArrayList<Integer> binHues = new ArrayList<Integer>(m_hgNumBins);
+    for (int i=0; i<m_hgNumBins; i++) {
+      binHues.add((i*255)/m_hgNumBins);
+    }
+    Collections.shuffle(binHues);  // shuffle the hues so adjacent bins have very different hues
+    
+    // Finally, for each sample in the list, determine which bin it belongs to and assign
+    // a hue accordingly
+    for (Integer sID : sampleIDs) {
+      int binIdx = findSample(sID);
+      
+      assert(binIdx >= 0);
+      if (binIdx < 0) {
+        binIdx = 0;
+      }
+      
+      hues.add(binHues.get(binIdx));
+    }
+  }
+  
+  
+  int findSample(int sampleID) {
+    // Find which bin the specified sample belongs to, and return the index of the bin. If not found, return -1.
+    for (HistogramBin bin : m_hgBins) {
+      if (bin.sampleInBin(sampleID)) {
+        return bin.m_idx;
+      }
+    }
+    return -1;
+  }
 
   
 }

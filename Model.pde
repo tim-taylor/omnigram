@@ -15,6 +15,7 @@ public class Model {
   int     m_modelDataLabelFileCol;  // column in data file corresponding to sample label (1-based)
   String  m_modelDataFilename;
   boolean m_modelLiveRun;
+  int     m_rngSeed;
   
   // information about individual nodes
   ArrayList<Node> m_rnodes; // Root nodes
@@ -40,9 +41,10 @@ public class Model {
   int m_ssTimer = 0;                       // a timer to determine when a new sample should be shown
   int m_ssTimerReset = 30;                 // timer value at which a new sample is shown and timer reset occurs
   int m_ssMaxSamplesToDisplay = 5;         // maximum allowed length of m_ssSamplesToDisplay 
-  ArrayList<Integer> m_ssSamplesToDisplay; // list of currently displayed SampleIDs, last in list is the most recent
-  int m_ssDisplayIdx = 0;                  // index of first current displayed sample in m_ssSamplesToDisplay
+  ArrayList<Integer> m_ssSamplesToDisplay; // a list of all samples currently in m_allSelectedSamples, in random order
+  int m_ssDisplayIdx = 0;                  // index of first currently displayed sample in m_ssSamplesToDisplay
   ArrayList<Integer> m_ssSampleHues;       // list of color hues used for displaying samples
+  int m_ssDisplayMode = 1;                 // 0=assign colors to samples at random, 1=assign according to bin in focal node
   
   // mode of visualisation
   VisualisationMode m_visualisationMode = VisualisationMode.FullAutoHeightAdjust;
@@ -78,9 +80,26 @@ public class Model {
     
     setDefaults();
      
-    XML xml = loadXML(configXMLfilename);    
- 
+    XML xml = null;
+   
+    try {
+      xml = loadXML(configXMLfilename);
+    } 
+    catch (Exception e) {
+      println("Input file does not appear to be an XML file of the correct format. Aborting!");
+      exit();
+    }
+    
+    if (xml == null) {
+      println("Problem loading XML file. Aborting!");
+      exit();
+    }   
+    
     XML general = xml.getChild("general");
+    if (general == null) {
+      println("Could not find general section in XML file. Aborting!");
+      exit();
+    }
     
     m_modelDataFilename = general.getString("data");
     m_modelHasData = (m_modelDataFilename != null);
@@ -92,6 +111,14 @@ public class Model {
     
     String sLiveRun = general.getString("live");
     m_modelLiveRun = (sLiveRun != null) && (sLiveRun.equals("true"));
+    
+    m_rngSeed = general.getInt("rng-seed", millis());
+    if (m_rngSeed < 0) {
+      m_rngSeed = millis();
+    }
+    randomSeed(m_rngSeed);
+    
+    int numSamplesFromFile = general.getInt("num-samples", -1);
     
     XML modelLabel = general.getChild("label");
     if (modelLabel != null) {
@@ -113,7 +140,12 @@ public class Model {
     // Now go through each of the nodes specified in the XML file, and create a new Node object of
     // the appropriate subclass (discrete, continuous) for each one
     
-    XML nodelist = xml.getChild("nodes"); 
+    XML nodelist = xml.getChild("nodes");
+    if (nodelist == null) {
+      println("No data nodes are defined in the XML file. Aborting!");
+      exit();
+    }
+    
     XML[] nodes = nodelist.getChildren("node");
     
     int rYpos = 20;
@@ -134,8 +166,11 @@ public class Model {
       int filecol = xnode.getInt("filecol");
       String role = xnode.getString("role"); // this determines whether node is placed into rnodes, inodes or lnodes
 
+      String name = "";
       XML label = xnode.getChild("label");
-      String name = label.getContent();
+      if (label != null) {
+        name = label.getContent();
+      }
 
       XML parentlist = xnode.getChild("parents");
       if (parentlist != null) {
@@ -196,7 +231,7 @@ public class Model {
     if (m_modelHasData) {
       
       // load data
-      load(m_modelDataFilename);
+      load(m_modelDataFilename, numSamplesFromFile);
       
       // first pass of initialisation of nodes based upon the data associated with each one
       checkAllNodesSafe();      
@@ -210,13 +245,6 @@ public class Model {
       
       // having initialised nodes, rescale them according to the distribution of heights of all nodes
       Arrays.sort(nodeHeights);
-      /*
-      println("Sorted node heights:");
-      for (int i = 0; i < numNodes; i++) {
-        println(nodeHeights[i]);
-      }
-      println("*****");
-      */
       int defaultH = m_allNodes.get(0).getDefaultH();
       int refH = nodeHeights[(numNodes*3)/4];
       if (defaultH != refH) {
@@ -250,21 +278,47 @@ public class Model {
     m_modelDataLabelFileCol = 0;
     m_smallFont  = createFont("Arial", 11, true);
     m_mediumFont = createFont("Arial", 16, true);
-    resetSampleHueList();
+    //resetSampleHueList();
   }
 
 
-  void load(String filename) {
-    // Having set up the Node objects, read in data from the specified data file (in CSV format) and store it 
-    // in the m_data variable
+  void load(String filename, int numSamplesToPick) {
+    // Having set up the Node objects, read in data from the specified data file (in CSV format)
+    // and store it in the m_data variable.
+    // If numSamplesToPick > 0, we pick that number of samples at random from the file, otherwise
+    // we load all samples.
     
     String lines[] = loadStrings(filename);
     
     checkAllNodesSafe();
     int numNodes = m_allNodes.size();
     
-    // cycle through each line of data in the date file
-    for (int i = 0 ; i < lines.length; i++) {
+    int numLinesInFile = lines.length;
+    
+    ArrayList<Integer> linesToLoad = new ArrayList<Integer>();
+    
+    // If we are picking specific lines, create a list of lines to pick, selected at random
+    if ((numSamplesToPick > 0) && (numSamplesToPick < numLinesInFile)) {
+      ArrayList<Integer> linesAvailable = new ArrayList<Integer>(numLinesInFile);
+      for (int i = 0; i < numLinesInFile; i++) {
+        linesAvailable.add(i);
+      }
+      //println("Selecting the following samples for data file:");
+      for (int i = 0; i < numSamplesToPick; i++) {
+        linesToLoad.add( linesAvailable.remove( (int)random(linesAvailable.size()) ) );
+        //println(linesToLoad.get(linesToLoad.size()-1));
+      }
+      //println("---");
+    }
+    
+    
+    // cycle through each line of data in the data file
+    for (int i = 0 ; i < numLinesInFile; i++) {
+      
+      // if we are picking specific lines and this isn't one of them, skip to the next line!
+      if ((!linesToLoad.isEmpty()) && (!linesToLoad.contains(i))) {
+        continue; 
+      }
 
       boolean dataAdded = false;
       boolean exception = false;
@@ -605,16 +659,19 @@ public class Model {
   
   void updateSelectedSampleList() {
     // Update m_allSelectedSamples to contain a list of all Samples currently selected by the range selectors
-    // of all focal nodes
+    // of all focal nodes.
+    // Having done that, update m_ssSamplesToDisplay to be a random permutation of the new m_allSelectedSamples.
     
     m_allSelectedSamples.clear();
     boolean firstFocalNode = true;
+    Node ffNode = null;
     
     checkAllNodesSafe();
     for (Node node : m_allNodes) {
       if (node.hasFocus()) {
         if (firstFocalNode) {
           m_allSelectedSamples.addAll(node.getSamplesInRange());
+          ffNode = node;
           firstFocalNode = false;
         }
         else {
@@ -627,6 +684,20 @@ public class Model {
     m_ssSamplesToDisplay = new ArrayList<Integer>(m_allSelectedSamples);
     Collections.shuffle(m_ssSamplesToDisplay);
     m_ssDisplayIdx = 0;
+    
+    if (m_ssDisplayMode == 1 && ffNode != null) {
+      // assign hue for each sample according to which bin it belongs to in the focal node
+      ffNode.matchSampleBinsToColors(m_ssSamplesToDisplay, m_ssSampleHues);
+    }
+    else {
+      // assign hue for each sample at random
+      int numSamples = m_ssSamplesToDisplay.size();
+      m_ssSampleHues.clear();
+      for (int i = 0; i < numSamples; i++) {
+        m_ssSampleHues.add((i*255)/numSamples);
+      }
+      Collections.shuffle(m_ssSampleHues);      
+    }
     
   }
   
@@ -672,7 +743,7 @@ public class Model {
     // Decrease the number of samples to be displayed in ShowSamples mode
     if (m_ssMaxSamplesToDisplay > 1) {
       m_ssMaxSamplesToDisplay--;
-      resetSampleHueList();
+      //resetSampleHueList();
     }
   }
   
@@ -681,7 +752,7 @@ public class Model {
     // Increase the number of samples to be displayed in ShowSamples mode
     if ((m_ssMaxSamplesToDisplay < 100) && (m_ssMaxSamplesToDisplay < m_allSelectedSamples.size())) {
       m_ssMaxSamplesToDisplay++;
-      resetSampleHueList();
+      //resetSampleHueList();
     }
   }
   
@@ -690,12 +761,13 @@ public class Model {
     // returns a Hue value between 0 and 255 to be used for displaying a specific sample in ShowSamples mode,
     // from the current palatte defined in m_ssSampleHues according to the index number passed in
     
-    assert(sampleDisplayIdx < m_ssSampleHues.size());
+    //assert(sampleDisplayIdx < m_ssSampleHues.size());
     
-    return m_ssSampleHues.get(sampleDisplayIdx);
+    return m_ssSampleHues.get(sampleDisplayIdx % m_ssSampleHues.size());
   }
   
   
+  /*
   void resetSampleHueList() {
     // Repopulate the m_ssSampleHues list with a palette of hues equally spaced between 0 and 255 according
     // to the number of samples specified in m_ssMaxSamplesToDisplay. Then randomly shuffle the order of
@@ -707,6 +779,7 @@ public class Model {
     }
     Collections.shuffle(m_ssSampleHues);
   }
+  */
 
   
   void mousePressed() {
@@ -840,6 +913,14 @@ public class Model {
   void toggleMeanMedian() {
     // switch between display of means and medians in the nodes
     m_showMedians = !m_showMedians;
+  }
+  
+  
+  void toggleSSDisplayMode() {
+    // for ShowSamples mode, switch between showing samples in random colors, or colored according to which
+    // bin the sample appears in in the first focal node
+    m_ssDisplayMode = 1 - m_ssDisplayMode;
+    updateSelectedSampleList();
   }
 
 

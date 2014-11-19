@@ -181,6 +181,7 @@ class HistogramBin {
             */
             
             if (!m_node.hasFocus()) {
+              // in ShowSamples mode, partially fade out bins in non-focal nodes
               fill(255, 220);
               rect(m_x, m_y-m_h, m_w, m_h);
             }
@@ -188,17 +189,40 @@ class HistogramBin {
             colorMode(HSB);
             stroke(0);
             int numInBin = 0;
-            int dIdx = m_node.m_model.m_ssDisplayIdx;
-            ArrayList<Integer> samples = m_node.m_model.m_ssSamplesToDisplay;
+            ArrayList<Integer> samples = m_node.m_model.m_ssSamplesToDisplay;     // a list of all sampleIDs currently selected
+            int dIdx = m_node.m_model.m_ssDisplayIdx;          // index of first sample in m_ssSamplesToDisplay to be displayed
             int numSamplesToDisplay = m_node.m_model.m_ssMaxSamplesToDisplay;
+                        
             if (!samples.isEmpty()) {
-              for (int i = 0; i < numSamplesToDisplay; i++) {
+              
+              // For model.m_ssDisplayMode==1, we need to first work out the color of each sample to
+              // be displayed in this bin, then sort the colors so that we display contiguous blocks
+              // of each color.
+              ArrayList<Integer> sortedHues = new ArrayList<Integer>();
+              if (m_node.m_model.m_ssDisplayMode == 1) {
+                for (int i = 0; i < numSamplesToDisplay; i++) {
+                  int sID = samples.get( (dIdx+i) % (samples.size()) );
+                  int sIdx = m_sampleIDs.indexOf(sID);
+                  if (sIdx >= 0) {                             // this sample appears in this bin, so record its color               
+                    sortedHues.add(m_node.m_model.getSampleHue(dIdx+i));
+                  }
+                }
+                Collections.sort(sortedHues);
+              }
+              
+              // Now loop through each sample to be displayed, and check whether it is in this bin.
+              // If so, display it in the approriate color
+              color c = 0;              
+              for (int i = 0; i < numSamplesToDisplay; i++) {  // loop through the required number of samples to display
                 int sID = samples.get( (dIdx+i) % (samples.size()) );
                 int sIdx = m_sampleIDs.indexOf(sID);
-                if (sIdx >= 0) {
+                if (sIdx >= 0) {                               // this sample appears in this bin, so display it!
                   numInBin++;
                   int y = m_y - (numInBin*m_w) + m_w/2;
-                  color c = color(m_node.m_model.getSampleHue(i), 255, 255);
+                  if (m_node.m_model.m_ssDisplayMode == 1)
+                    c = color(sortedHues.get(numInBin-1), 255, 255);
+                  else
+                    c = color(m_node.m_model.getSampleHue(dIdx+i), 255, 255);
                   fill(c);
                   ellipse(m_x + (m_w/2), y, m_w, m_w);
                 }

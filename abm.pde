@@ -10,57 +10,60 @@
 */
 
 // N.B. When specifying the loader file, loader doesn't seem to cope with filenames that are symbolic links!
-String modelLoaderFile = "auto-mpg-loader.xml";
+//String modelLoaderFile = "auto-mpg-loader.xml";
 //String modelLoaderFile = "breast-cancer-wisconsin-loader.xml";
 //String modelLoaderFile = "pertussis-data-reduced-n-1000-seed-1-clean-loader.xml";
 //String modelLoaderFile = "influenza-data-31-20-n-1000-clean-loader.xml";
-
+String modelLoaderFile = "";
 int globalZoom = 100;
 int nodeZoom = 100;
-
 Model model;
 
 
 void setup() {
   size((displayWidth*80)/100, (displayHeight*80)/100);
-  
   if (frame != null) {
     frame.setResizable(true);
   }
-
   smooth();
   noStroke();
-  
-  model = new Model(modelLoaderFile);
-  model.m_interactionMode = InteractionMode.SingleNodeBrushing;
+  noLoop();
+  selectInput("Select a model definition XML file:", "modelFileSelected");
+}
+
+
+void modelFileSelected(File file) {
+  // Callback function for the file selection dialog
+  if (file == null) {
+    exit();
+  } else {
+    modelLoaderFile = file.getAbsolutePath();
+    model = new Model(modelLoaderFile);
+    model.m_interactionMode = InteractionMode.SingleNodeBrushing;
+    loop();
+  }
 }
 
 
 void draw() {
-  
-  model.draw(globalZoom, nodeZoom);
-
+  if (model != null) {
+    model.draw(globalZoom, nodeZoom);
+  }
 }
 
 
 void mousePressed() {
-  
   model.mousePressed();
- 
 }
 
 
 void mouseReleased() {  
-  
   model.mouseReleased();
-
 }
 
 
 void mouseDragged() {
-  
   model.mouseDragged();
-
 }
 
 
@@ -108,6 +111,10 @@ void keyPressed() {
       case '3':
         model.setInteractionMode(InteractionMode.ShowSamples);
         break;
+      case 'C':
+      case 'c':
+        model.toggleSSDisplayMode();
+        break;
       case 'L':
       case 'l':
         model.linkRequest();
@@ -129,4 +136,5 @@ void keyPressed() {
     }
   }
 }
+  
 
