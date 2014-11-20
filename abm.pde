@@ -127,6 +127,9 @@ void keyPressed() {
       case 'm':
         model.toggleMeanMedian();
         break;
+      case 'R':
+      case 'r':
+        model.initialiseCausalLinks();
       case 'S':
       case 's':
         model.toggleSSDisplayMode();

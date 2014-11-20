@@ -1,17 +1,18 @@
 public abstract class Node {
   
   // identity
-  int m_id;             // used to refer to this Node when we can't use a reference
-  String m_name;        // human readable name of node
+  int m_id;               // used to refer to this Node when we can't use a reference
+  String m_name;          // human readable name of node
   
   // Widget appearance and position
-  int m_nodeW;          // width of Node widget
-  int m_nodeH;          // height of Node widget
-  int m_referenceH;     // reference height of Node, used when rescaling
-  int m_x;              // x position of top-left corner
-  int m_y;              // y position of top-left corner
-  int m_minimisedX;     // x position when node is minimised
-  int m_minimisedY;     // y position when node is minimised
+  int m_nodeW;            // width of Node widget
+  int m_nodeH;            // height of Node widget
+  int m_referenceH;       // reference height of Node, used when rescaling
+  int m_x;                // x position of top-left corner
+  int m_y;                // y position of top-left corner
+  int m_minimisedX;       // x position when node is minimised
+  int m_minimisedY;       // y position when node is minimised
+  int m_minimisedW = 100; // width when minimised
   int m_nodeZoom = 100;
     
   protected int m_mbH = 25;       // menu bar height
@@ -244,6 +245,11 @@ public abstract class Node {
     // returns the height of the node when minimised
     return m_mbH;
   }
+  
+  
+  int getMinimisedW() {
+    return m_minimisedW;
+  }  
   
   
   int getCentreX() {
@@ -541,7 +547,7 @@ public abstract class Node {
     
     if (m_bMinimised) {
       return (mouseX >= m_minimisedX &&
-              mouseX < m_minimisedX + m_nodeW &&
+              mouseX < m_minimisedX + m_minimisedW &&
               mouseY >= m_minimisedY &&
               mouseY <= m_minimisedY + m_mbH);      
     }
@@ -1120,10 +1126,8 @@ public abstract class Node {
   }
   
   
-  void drawMinimised(int nodeZoom) {
-
-    m_nodeZoom = nodeZoom;
- 
+  void drawMinimised() {
+    
     pushStyle();
     pushMatrix();
     
@@ -1131,7 +1135,7 @@ public abstract class Node {
     
     // draw background
     fill(m_mbBackgroundColor);
-    rect(0, 0, m_nodeW, m_mbH);
+    rect(0, 0, m_minimisedW, m_mbH);
     
     // draw root/inter/leaf indication
     switch (m_role) {
@@ -1140,21 +1144,21 @@ public abstract class Node {
       case 2: fill(m_mbLeafColor);  break;
       default: fill(m_mbBackgroundColor);
     }
-    rect(0, 0, m_nodeW, m_mbSpacer);  
+    rect(0, 0, m_minimisedW, m_mbSpacer);  
     
     // draw maximise widget
     fill(m_mbMinWidgetBackgroundColor);
     stroke(m_mbMinWidgetForegroundColor);
-    rect(m_nodeW-m_mbWidgetW+m_mbSpacer, m_mbSpacer, m_mbWidgetW-(2*m_mbSpacer), m_mbH-(2*m_mbSpacer));
+    rect(m_minimisedW-m_mbWidgetW+m_mbSpacer, m_mbSpacer, m_mbWidgetW-(2*m_mbSpacer), m_mbH-(2*m_mbSpacer));
     strokeWeight(2);
     strokeCap(SQUARE);
-    line(m_nodeW-m_mbWidgetW+m_mbSpacer, m_mbSpacer+1, m_nodeW-m_mbSpacer, m_mbSpacer+1);
+    line(m_minimisedW-m_mbWidgetW+m_mbSpacer, m_mbSpacer+1, m_minimisedW-m_mbSpacer, m_mbSpacer+1);
     
     // write node name    
-    textFont(m_model.m_mediumFont, 16);
+    textFont(m_model.m_smallFont, 11);
     fill(m_lbForegroundColor);
     textAlign(CENTER);
-    text(m_name, m_nodeW/2, m_mbH-6);    
+    text(m_name.substring(0,min(m_name.length(),15)), m_minimisedW/2, m_mbH-6);
     
     popMatrix();
     popStyle();    
@@ -1170,7 +1174,7 @@ public abstract class Node {
         
     if (mouseOver()) {
       // the mouse has been pressed within this node, so figure out what we need to do about it!
-      if (mouseX > m_minimisedX + m_nodeW - m_mbWidgetW) {
+      if (mouseX > m_minimisedX + m_minimisedW - m_mbWidgetW) {
         maximise();
       }
     }

@@ -678,7 +678,7 @@ public class Model {
     }
     
     // draw minimised nodes
-    drawMinimisedNodes(nodeZoom);
+    drawMinimisedNodes();
     
     // calculate menu visibility based upon position of mouse pointer
     if (mouseY < m_menuH) {
@@ -1047,23 +1047,23 @@ public class Model {
   }
   
   
-  void drawMinimisedNodes(int nodeZoom) {
+  void drawMinimisedNodes() {
     // figure out position of each node, and setMinimisedPos before drawing it
     
     int x = m_minimisedInternodeGap;
     int y = height - m_minimisedInternodeGap;
     
     for (Node node : m_minimisedNodes) {
-    
-      if ((x > m_minInternodeGap) && (x + node.getW() > width)) {
+         
+      if ((x > m_minInternodeGap) && (x + node.getMinimisedW() > width)) {
         y -= (node.getMinimisedH() + m_minimisedInternodeGap);
         x = m_minimisedInternodeGap;
       }
     
       node.setMinimisedPos(x, y - node.getMinimisedH());
-      node.drawMinimised(nodeZoom);
+      node.drawMinimised();
     
-      x += (node.getW() + m_minimisedInternodeGap);
+      x += (node.getMinimisedW() + m_minimisedInternodeGap);
       if (x > width) {
         y -= (node.getMinimisedH() + m_minimisedInternodeGap);
         x = m_minimisedInternodeGap;
