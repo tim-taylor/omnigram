@@ -8,8 +8,8 @@ public class ContinuousNode extends Node {
   
  
  
-  ContinuousNode(Model model, int id, String name, int filecol, int datacol, float min, float max, ArrayList<Integer> parentIDs) {
-    super(model, id, name, filecol, datacol, parentIDs);
+  ContinuousNode(Model model, int id, String name, int filecol, int datacol, float min, float max, int role, ArrayList<Integer> parentIDs) {
+    super(model, id, name, filecol, datacol, role, parentIDs);
     m_rangeMin = m_rangeLow = min;
     m_rangeMax = m_rangeHigh = max;
   }  

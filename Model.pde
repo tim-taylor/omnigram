@@ -33,6 +33,9 @@ public class Model {
   boolean m_bNewBrushLinkUnderConstruction;
   Node m_newBrushLinkNode1;
   
+  // information about causal links between nodes
+  ArrayList<CausalLink> m_causalLinks;
+  
   // current mode of interaction
   InteractionMode m_interactionMode = InteractionMode.Unassigned;
   
@@ -50,6 +53,7 @@ public class Model {
   VisualisationMode m_visualisationMode = VisualisationMode.FullAutoHeightAdjust;
   boolean m_visTiled = true;               // display histogram bins as tiled or continuous?
   boolean m_showMedians = false;           // display histogram medians rather than means in range selector bar?
+  boolean m_showCausalLinks = true;        // display causal links?
   
   // global information about appearance
   int   m_globalZoom = 100;
@@ -134,6 +138,8 @@ public class Model {
       m_numRootCols = appearance.getInt("num-root-cols", m_numRootCols);
       m_numInterCols = appearance.getInt("num-inter-cols", m_numInterCols);
       m_numLeafCols = appearance.getInt("num-leaf-cols", m_numLeafCols);
+      String showCausalLinks = appearance.getString("show-causal-links");
+      m_showCausalLinks = (showCausalLinks != null) && showCausalLinks.equals("1");
     }
     
     
@@ -155,6 +161,8 @@ public class Model {
     int nextFreeDataCol = 0; 
     
     for (int i=0; i < nodes.length; i++) {
+      // process each node in turn
+      
       int imin, imax;
       float fmin, fmax;
       ArrayList<Integer> parentIDs = new ArrayList<Integer>();
@@ -162,9 +170,25 @@ public class Model {
       
       XML xnode = nodes[i];
       
-      int id = xnode.getInt("id");
-      int filecol = xnode.getInt("filecol");
-      String role = xnode.getString("role"); // this determines whether node is placed into rnodes, inodes or lnodes
+      int id = xnode.getInt("id", 0);
+      int filecol = xnode.getInt("filecol", 0);
+      
+      String strRole = xnode.getString("role"); // this determines whether node is placed into rnodes, inodes or lnodes
+      if (strRole == null) {
+        println("No role attribute specified for node "+id+" in XML file!");
+        exit();
+      }
+      int role = 0;
+      if (strRole.equals("root"))
+        role = 0;
+      else if (strRole.equals("inter"))
+        role = 1;
+      else if (strRole.equals("leaf"))
+        role = 2;
+      else {
+        println("Oops! Found a node with unknown role '" + strRole + "' in file " + configXMLfilename);
+        exit();
+      }      
 
       String name = "";
       XML label = xnode.getChild("label");
@@ -185,41 +209,44 @@ public class Model {
       if (datatype.equals("discrete")) {
         imin = xnode.getInt("min");
         imax = xnode.getInt("max");
-        newnode = new DiscreteNode(this,id,name,filecol,nextFreeDataCol++,imin,imax,parentIDs);
+        newnode = new DiscreteNode(this,id,name,filecol,nextFreeDataCol++,imin,imax,role,parentIDs);
       }
       else if (datatype.equals("continuous")) {
         fmin = xnode.getFloat("min");
         fmax = xnode.getFloat("max");
-        newnode = new ContinuousNode(this,id,name,filecol,nextFreeDataCol++,fmin,fmax,parentIDs);
+        newnode = new ContinuousNode(this,id,name,filecol,nextFreeDataCol++,fmin,fmax,role,parentIDs);
       }
       else {
         println("Oops! Found a node of unknown type '" + datatype + "' in file " + configXMLfilename);
         exit();
       }
-           
-      if (role.equals("root")) {
-        m_rnodes.add(newnode);
-        newnode.setPosition(100, rYpos);
-        rYpos += 230;
-        println("Adding new rnode " + newnode.m_name);
-      }
-      else if (role.equals("inter")) {
-        m_inodes.add(newnode);
-        newnode.setPosition(500, iYpos);
-        iYpos += 230;
-        println("Adding new inode " + newnode.m_name);
-      }
-      else if (role.equals("leaf")) {
-        m_lnodes.add(newnode);
-        newnode.setPosition(900, lYpos);
-        lYpos += 230;
-        println("Adding new lnode " + newnode.m_name);
-      }
-      else {
-        println("Oops! Found a node with unknown role '" + role + "' in file " + configXMLfilename);
-        exit();
+      
+      switch (role) {
+        case 0: {
+          m_rnodes.add(newnode);
+          println("Adding new rnode " + newnode.m_name);
+          break;
+        }
+        case 1: {
+          m_inodes.add(newnode);
+          println("Adding new inode " + newnode.m_name);
+          break;
+        }
+        case 2: {
+          m_lnodes.add(newnode);
+          println("Adding new lnode " + newnode.m_name);
+          break;
+        }
+        default: {
+          println("Oops! Found a node with unknown role '" + role + "' in file " + configXMLfilename);
+          exit();
+        }
       }
     }
+    
+    // Having processed all of the nodes, set up any causal links as specified by each node's
+    // list of parent nodes
+    initialiseCausalLinks();
     
     // We have now created all of the nodes, now we lay them out on the screen according to any
     // layout specifications given in the XML file (note that later on we tweek the positions
@@ -257,28 +284,27 @@ public class Model {
       // The node heights might have been adjusted now that we have added the data, so retile all 
       // nodes to ensure that they are still evenly spaced
       tileNodes();
-      
     }
   }
   
   
   void setDefaults() {
-    m_data       = new ArrayList<ArrayList<Number>>();
-    m_dataLabels = new ArrayList<String>();
-    m_rnodes     = new ArrayList<Node>();
-    m_inodes     = new ArrayList<Node>();
-    m_lnodes     = new ArrayList<Node>();
-    m_allNodes   = new ArrayList<Node>();
+    m_data         = new ArrayList<ArrayList<Number>>();
+    m_dataLabels   = new ArrayList<String>();
+    m_rnodes       = new ArrayList<Node>();
+    m_inodes       = new ArrayList<Node>();
+    m_lnodes       = new ArrayList<Node>();
+    m_allNodes     = new ArrayList<Node>();
     m_allNodesSafe = false;
-    m_brushLinks = new ArrayList<BrushLink>();
+    m_brushLinks   = new ArrayList<BrushLink>();
     m_bNewBrushLinkUnderConstruction = false;
+    m_causalLinks  = new ArrayList<CausalLink>();
     m_allSelectedSamples = new HashSet<Integer>();
     m_ssSamplesToDisplay = new ArrayList<Integer>();
     m_ssSampleHues = new ArrayList<Integer>();
     m_modelDataLabelFileCol = 0;
-    m_smallFont  = createFont("Arial", 11, true);
-    m_mediumFont = createFont("Arial", 16, true);
-    //resetSampleHueList();
+    m_smallFont    = createFont("Arial", 11, true);
+    m_mediumFont   = createFont("Arial", 16, true);
   }
 
 
@@ -303,14 +329,10 @@ public class Model {
       for (int i = 0; i < numLinesInFile; i++) {
         linesAvailable.add(i);
       }
-      //println("Selecting the following samples for data file:");
       for (int i = 0; i < numSamplesToPick; i++) {
         linesToLoad.add( linesAvailable.remove( (int)random(linesAvailable.size()) ) );
-        //println(linesToLoad.get(linesToLoad.size()-1));
       }
-      //println("---");
     }
-    
     
     // cycle through each line of data in the data file
     for (int i = 0 ; i < numLinesInFile; i++) {
@@ -386,6 +408,15 @@ public class Model {
 
   
   void checkAllNodesSafe() {
+    // m_allNodes contains an aggregrate list of all root, intermediate and leaf nodes in a single list
+    // If any of these lists are changed (for example a node is move from one list to another, or a node
+    // is added or deleted), then the program should set the m_allNodesSafe flag to false. Then, whenever
+    // the program wants to use m_allNodesSafe, it should first call this method. This checks whether it is
+    // safe to use the list, and if not, rebuilds the list to reflect the current state of all nodes.
+    //
+    // In practice, none of these scenarios of changing the contents of root, intermediate and leaf node lists
+    // is currently implemented, so this method is not actually required at this stage!
+    
     if (!m_allNodesSafe) {
       m_allNodes.clear();
       m_allNodes.addAll(m_rnodes);
@@ -393,6 +424,39 @@ public class Model {
       m_allNodes.addAll(m_lnodes);
       m_allNodesSafe = true;
     }
+  }
+  
+  
+  void initialiseCausalLinks() {
+    // Look at the parents of each node, and create a new CausalLink object for each link so specified and
+    // add it to m_causalLinks
+    
+    m_causalLinks.clear();
+    
+    checkAllNodesSafe();
+    for (Node nodeTo : m_allNodes) {
+      for (Integer nodeFromID : nodeTo.m_parentIDs) {
+        Node nodeFrom = getNodeFromID(nodeFromID);
+        if (nodeFrom != null) {
+          m_causalLinks.add( new CausalLink(this, nodeFrom, nodeTo) );
+        }
+      }
+    }
+  }
+  
+  
+  Node getNodeFromID(int id) {
+    // Find the node specified by the given id (Node.m_id) and return it, otherwise return null if
+    // no matching node is found.
+    
+    checkAllNodesSafe();
+    for (Node node : m_allNodes) {
+      if (node.m_id == id) {
+        return node;
+      }
+    }
+    
+    return null;
   }
   
   
@@ -506,7 +570,7 @@ public class Model {
         resetAllBrushing();
         brushAllNodesOnMultiSelection();
         m_ssTimer = 0;
-        m_ssSamplesToDisplay.clear();
+        updateSelectedSampleList();
         redraw();
         break;
       }
@@ -589,9 +653,16 @@ public class Model {
     m_globalZoom = globalZoom;
     
     // draw brush links
-    for (BrushLink link : m_brushLinks) {
-      link.draw();
-    }    
+    for (BrushLink bLink : m_brushLinks) {
+      bLink.draw();
+    }
+    
+    // draw causal links if required
+    if (m_showCausalLinks) {
+      for (CausalLink cLink : m_causalLinks) {
+        cLink.draw();
+      }
+    }
     
     // draw nodes
     checkAllNodesSafe();
@@ -809,9 +880,37 @@ public class Model {
   }
   
   
-  void linkRequest() {
+  void requestCausalLinkChange() {
+    // The user has pressed 'C' to delete a casual link.
+    // Check whether the mouse pointer is currently over a causal link's control handle.
+    // If so, delete that link, otherwise do nothing.
+    
+    for (CausalLink link : m_causalLinks) {
+      if (link.mouseOver()) {
+        m_causalLinks.remove(link);
+        return;
+      }
+    }
+  }
+  
+  
+  void requestToggleCausalLinkDir() {
+    // The user has pressed 'D' to reverse the direction of a casual link.
+    // Check whether the mouse pointer is currently over a causal link's control handle.
+    // If so, toggle the link's direction, otherwise do nothing.
+    
+    for (CausalLink link : m_causalLinks) {
+      if (link.mouseOver()) {
+        link.toggleDirection();
+        return;
+      }
+    }    
+  }
+  
+  
+  void requestBrushLinkChange() {
     // The user has pressed 'L' to create a new brush link or to delete an existing link
-    // We first look at the case of deleting an existing link, by checking if the mousr pointer is
+    // We first look at the case of deleting an existing link, by checking if the mouse pointer is
     // currently over a link's control handle. If so, we delete that link.
     // Otherwise, we check if the mouse pointer is currently over a node, and whether we have already
     // initiated a new brush link creation process (in which case this is the second node of the link

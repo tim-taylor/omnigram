@@ -12,14 +12,21 @@ public abstract class Node {
   int m_y;              // y position of top-left corner
   int m_nodeZoom = 100;
     
-  protected int m_mbH = 25;      // menu bar height
-  protected int m_hgH;           // histogram height (DERIVED = m_nodeH - m_mbH - m_rsH - m_lbH)
-  protected int m_hgHeadH = 12;  // histogram header height (for drawing bin base lines): this is part of m_hgH
-  protected int m_hgFootH = 7;   // histogram footer height (for drawing bin base lines): this is part of m_hgH
-  protected int m_rsH = 25;      // range selector height
-  protected int m_lbH = 25;      // label bar height
+  protected int m_mbH = 25;       // menu bar height
+  protected int m_mbWidgetW = 25; // width of a widget in the menu bar
+  protected int m_hgH;            // histogram height (DERIVED = m_nodeH - m_mbH - m_rsH - m_lbH)
+  protected int m_hgHeadH = 12;   // histogram header height (for drawing bin base lines): this is part of m_hgH
+  protected int m_hgFootH = 7;    // histogram footer height (for drawing bin base lines): this is part of m_hgH
+  protected int m_rsH = 25;       // range selector height
+  protected int m_lbH = 25;       // label bar height
   
   color m_mbBackgroundColor;
+  color m_mbFocusColor;
+  color m_mbRootColor;
+  color m_mbInterColor;
+  color m_mbLeafColor;
+  color m_mbMinWidgetBackgroundColor;
+  color m_mbMinWidgetForegroundColor;
   color m_hgBackgroundColor;
   color m_hgBaseColor;
   color m_rsBackgroundColor;
@@ -69,10 +76,9 @@ public abstract class Node {
   int m_rsLow = 0;   // the (0-based) index in m_hgBins of the lowest selected histogram bin
   int m_rsHigh = 0;  // the (0-based) index in m_hgBins of the highest selected histogram bin
   
-  // Links to connected Nodes
-  ArrayList<Node> m_parents; // TO DO: these will have to be populated after ALL Nodes have been constructed
-  ArrayList<Node> m_children;  
-  ArrayList<Integer> m_parentIDs;
+  // Links to causally connected Nodes
+  ArrayList<Integer> m_parentIDs; // list of IDs (Node.m_id) of this node's causal parents 
+  int m_role;                     // specifies whether this node is a Root (0), Intermediate (1) or Leaf node (2)
   
   // Information about BrushLinks associated with this node
   boolean m_brushLinkUnderConstruction; // flag to indicate if user is in process of constructing a new brush link on this node
@@ -86,12 +92,13 @@ public abstract class Node {
   abstract Number getHistogramBinHighVal(int bin);
 
   
-  Node(Model model, int id, String name, int filecol, int datacol, ArrayList<Integer> parentIDs) {
+  Node(Model model, int id, String name, int filecol, int datacol, int role, ArrayList<Integer> parentIDs) {
     m_model = model;
     m_id = id;
     m_name = name;
     m_dataFileCol = filecol;
     m_dataArrayCol = datacol;
+    m_role = constrain(role, 0, 2);
     m_parentIDs = parentIDs;
     m_nodeW = getDefaultW();
     m_nodeH = getDefaultH();
@@ -101,6 +108,14 @@ public abstract class Node {
     m_hgH = m_nodeH - m_mbH - m_rsH - m_lbH;
     m_hgDefaultMaxBinH = m_hgH - m_hgHeadH - m_hgFootH; 
     m_mbBackgroundColor      = #E0E0E0;
+    m_mbFocusColor           = #EE2222;
+    colorMode(HSB, 360, 100, 100);
+    m_mbRootColor            = color(120, 35, 80);
+    m_mbInterColor           = color(170, 35, 80);
+    m_mbLeafColor            = color(220, 35, 80);
+    colorMode(RGB);
+    m_mbMinWidgetBackgroundColor = #CCCCCC;
+    m_mbMinWidgetForegroundColor = #101010;   
     m_hgBackgroundColor      = #FFFFFF;
     m_hgBaseColor            = #000000;
     m_rsBackgroundColor      = #999999;
@@ -140,9 +155,12 @@ public abstract class Node {
   
   
   void setH(int h, boolean resizeBins, boolean resetReferenceH) {
+    // Set the height of the node, and also resize the histogram bins if requested.
+    // A node has a concept of a reference height, which is used for calculating scale factors when
+    // resizing histogram bins. This solves the problem of accumulating rounding errors in bin heights
+    // after multiple resizes, which might otherwise occur.
      
     int nonHistH = m_mbH + m_rsH + m_lbH + m_hgHeadH + m_hgFootH; // combined height of everything except main histogram area
-    //int oldHistH = m_nodeH - nonHistH;
     int oldHistH = m_referenceH - nonHistH;
     int newHistH = h - nonHistH;
     float histSF = (float)newHistH / (float)oldHistH;
@@ -235,9 +253,7 @@ public abstract class Node {
 
   
   void initialiseHistogramCommon() {
-    
-    // this is a common helper method called in the initialiseHistogram methods of
-    // derived classes
+    // This is a common helper method called in the initialiseHistogram methods of derived classes
 
     m_hgBinSampleCounts = new int[m_hgNumBins];
     m_hgBinMinVals = new ArrayList<Number>();
@@ -335,10 +351,41 @@ public abstract class Node {
 
   
   void drawMenuBar() {
-    pushMatrix();    
+    pushStyle();
+    pushMatrix();
+    
+    int gap = 7;
+
+    // draw background
     fill(m_mbBackgroundColor);
     rect(0, 0, m_nodeW, m_mbH);
+    
+    // draw root/inter/leaf indication
+    switch (m_role) {
+      case 0: fill(m_mbRootColor);  break;
+      case 1: fill(m_mbInterColor); break;
+      case 2: fill(m_mbLeafColor);  break;
+      default: fill(m_mbBackgroundColor);
+    }
+    rect(0, 0, m_nodeW, gap /*m_mbH/3*/);
+    
+    // draw focus indicator
+    if (m_bHasFocus) {
+      stroke(m_mbFocusColor);
+      fill(m_mbFocusColor);
+      rect(gap-1, gap, m_mbWidgetW-(2*gap)+1, m_mbH-(2*gap)+1);
+    }    
+    
+    // draw minimize widget
+    fill(m_mbMinWidgetBackgroundColor);
+    stroke(m_mbMinWidgetForegroundColor);
+    rect(m_nodeW-m_mbWidgetW+gap, gap, m_mbWidgetW-(2*gap), m_mbH-(2*gap));
+    strokeWeight(2);
+    strokeCap(SQUARE);
+    line(m_nodeW-m_mbWidgetW+(1*gap), m_mbH-(1*gap)-1, m_nodeW-(1*gap), m_mbH-(1*gap)-1);
+    
     popMatrix();
+    popStyle();
   }
 
   

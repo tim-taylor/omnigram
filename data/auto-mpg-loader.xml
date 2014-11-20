@@ -8,14 +8,11 @@
 	
 	<appearance node-bin-scale-factor="5.0" node-default-height="150" node-default-width="330"
 			 min-internode-gap="20"
-			 num-root-cols="2" num-inter-cols="1" num-leaf-cols="1">
+			 num-root-cols="2" num-inter-cols="1" num-leaf-cols="1"
+			 show-causal-links="1">
 	</appearance>
 	
 	<nodes>
-		
-		<node id="1" datatype="continuous" min="68.0" max="455.0" role="root" filecol="3">
-			<label>displacement</label>
-		</node>
 		
 		<node id="2" datatype="discrete" min="70" max="82" role="root" filecol="7">
 			<label>model year</label>
@@ -30,6 +27,10 @@
 				<parent id="1" />
 			</parents>
 		</node>	
+		
+		<node id="1" datatype="continuous" min="68.0" max="455.0" role="root" filecol="3">
+			<label>displacement</label>
+		</node>		
 		
 		<node id="4" datatype="discrete" min="3" max="8" role="inter" filecol="2">
 			<label>cylinders</label>
@@ -46,13 +47,6 @@
 			</parents>
 		</node>	
 		
-		<node id="6" datatype="continuous" min="8.0" max="24.8" role="leaf" filecol="6">
-			<label>acceleration</label>
-			<parents>
-				<parent id="5" />
-			</parents>
-		</node>	
-		
 		<node id="7" datatype="continuous" min="1613.0" max="5140.0" role="leaf" filecol="5">
 			<label>weight</label>
 			<parents>
@@ -65,7 +59,15 @@
 			<parents>
 				<parent id="4" />
 			</parents>
-		</node>			
+		</node>
+		
+		
+		<node id="6" datatype="continuous" min="8.0" max="24.8" role="leaf" filecol="6">
+			<label>acceleration</label>
+			<parents>
+				<parent id="5" />
+			</parents>
+		</node>		
 		
 	</nodes>
 

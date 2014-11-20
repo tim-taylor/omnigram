@@ -113,15 +113,23 @@ void keyPressed() {
         break;
       case 'C':
       case 'c':
-        model.toggleSSDisplayMode();
+        model.requestCausalLinkChange();
+        break;
+      case 'D':
+      case 'd':
+        model.requestToggleCausalLinkDir();
         break;
       case 'L':
       case 'l':
-        model.linkRequest();
+        model.requestBrushLinkChange();
         break;
       case 'M':
       case 'm':
         model.toggleMeanMedian();
+        break;
+      case 'S':
+      case 's':
+        model.toggleSSDisplayMode();
         break;
       case 'Z':
       case 'z':
