@@ -36,6 +36,9 @@ public class Model {
   // information about causal links between nodes
   ArrayList<CausalLink> m_causalLinks;
   
+  // information about minimised nodes
+  ArrayList<Node> m_minimisedNodes;
+  
   // current mode of interaction
   InteractionMode m_interactionMode = InteractionMode.Unassigned;
   
@@ -61,6 +64,7 @@ public class Model {
   int   m_nodeDefaultWidth   = 330;
   float m_nodeBinScaleFactor = 5.0; // used to determine the default scale of histogram bins in nodes
   int   m_minInternodeGap = 20;
+  int   m_minimisedInternodeGap = 5;
   int   m_numRootCols = 1;
   int   m_numInterCols = 1;
   int   m_numLeafCols = 1;
@@ -289,22 +293,23 @@ public class Model {
   
   
   void setDefaults() {
-    m_data         = new ArrayList<ArrayList<Number>>();
-    m_dataLabels   = new ArrayList<String>();
-    m_rnodes       = new ArrayList<Node>();
-    m_inodes       = new ArrayList<Node>();
-    m_lnodes       = new ArrayList<Node>();
-    m_allNodes     = new ArrayList<Node>();
-    m_allNodesSafe = false;
-    m_brushLinks   = new ArrayList<BrushLink>();
+    m_data               = new ArrayList<ArrayList<Number>>();
+    m_dataLabels         = new ArrayList<String>();
+    m_rnodes             = new ArrayList<Node>();
+    m_inodes             = new ArrayList<Node>();
+    m_lnodes             = new ArrayList<Node>();
+    m_allNodes           = new ArrayList<Node>();
+    m_allNodesSafe       = false;
+    m_brushLinks         = new ArrayList<BrushLink>();
     m_bNewBrushLinkUnderConstruction = false;
-    m_causalLinks  = new ArrayList<CausalLink>();
+    m_causalLinks        = new ArrayList<CausalLink>();
+    m_minimisedNodes     = new ArrayList<Node>();
     m_allSelectedSamples = new HashSet<Integer>();
     m_ssSamplesToDisplay = new ArrayList<Integer>();
-    m_ssSampleHues = new ArrayList<Integer>();
+    m_ssSampleHues       = new ArrayList<Integer>();
     m_modelDataLabelFileCol = 0;
-    m_smallFont    = createFont("Arial", 11, true);
-    m_mediumFont   = createFont("Arial", 16, true);
+    m_smallFont          = createFont("Arial", 11, true);
+    m_mediumFont         = createFont("Arial", 16, true);
   }
 
 
@@ -601,11 +606,13 @@ public class Model {
     ArrayList<Node> otherNodes = new ArrayList<Node>();
     
     for (Node node : m_allNodes) {
-      if (node.m_bHasFocus) {
-        focalNodes.add(node);
-      }
-      else {
-        otherNodes.add(node);
+      if (!node.minimised()) {
+        if (node.m_bHasFocus) {
+          focalNodes.add(node);
+        }
+        else {
+          otherNodes.add(node);
+        }
       }
     }
     
@@ -669,6 +676,9 @@ public class Model {
     for (Node node : m_allNodes) {
       node.draw(nodeZoom);
     }
+    
+    // draw minimised nodes
+    drawMinimisedNodes(nodeZoom);
     
     // calculate menu visibility based upon position of mouse pointer
     if (mouseY < m_menuH) {
@@ -999,11 +1009,13 @@ public class Model {
     // their range selector bars according to the nature of the link.
     
     for (BrushLink link : m_brushLinks) {
-      if (link.m_node1 == node) {
-        link.m_node2.adjustRangeSelector(node, link.m_strength);
-      }
-      else if (link.m_node2 == node) {
-        link.m_node1.adjustRangeSelector(node, link.m_strength);
+      if (link.enabled()) {
+        if (link.m_node1 == node) {
+          link.m_node2.adjustRangeSelector(node, link.m_strength);
+        }
+        else if (link.m_node2 == node) {
+          link.m_node1.adjustRangeSelector(node, link.m_strength);
+        }
       }
     }
   }
@@ -1020,6 +1032,44 @@ public class Model {
     // bin the sample appears in in the first focal node
     m_ssDisplayMode = 1 - m_ssDisplayMode;
     updateSelectedSampleList();
+  }
+  
+  
+  void addMinimisedNode(Node node) {
+    assert(!m_minimisedNodes.contains(node));
+    m_minimisedNodes.add(node);
+  }
+  
+  
+  void removeMinimisedNode(Node node) {
+    assert(m_minimisedNodes.contains(node));
+    m_minimisedNodes.remove(node);
+  }
+  
+  
+  void drawMinimisedNodes(int nodeZoom) {
+    // figure out position of each node, and setMinimisedPos before drawing it
+    
+    int x = m_minimisedInternodeGap;
+    int y = height - m_minimisedInternodeGap;
+    
+    for (Node node : m_minimisedNodes) {
+    
+      if ((x > m_minInternodeGap) && (x + node.getW() > width)) {
+        y -= (node.getMinimisedH() + m_minimisedInternodeGap);
+        x = m_minimisedInternodeGap;
+      }
+    
+      node.setMinimisedPos(x, y - node.getMinimisedH());
+      node.drawMinimised(nodeZoom);
+    
+      x += (node.getW() + m_minimisedInternodeGap);
+      if (x > width) {
+        y -= (node.getMinimisedH() + m_minimisedInternodeGap);
+        x = m_minimisedInternodeGap;
+      }
+      
+    }
   }
 
 

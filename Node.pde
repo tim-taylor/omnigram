@@ -10,10 +10,13 @@ public abstract class Node {
   int m_referenceH;     // reference height of Node, used when rescaling
   int m_x;              // x position of top-left corner
   int m_y;              // y position of top-left corner
+  int m_minimisedX;     // x position when node is minimised
+  int m_minimisedY;     // y position when node is minimised
   int m_nodeZoom = 100;
     
   protected int m_mbH = 25;       // menu bar height
   protected int m_mbWidgetW = 25; // width of a widget in the menu bar
+  protected int m_mbSpacer = 7;   // space used for placement of various items in menu bar
   protected int m_hgH;            // histogram height (DERIVED = m_nodeH - m_mbH - m_rsH - m_lbH)
   protected int m_hgHeadH = 12;   // histogram header height (for drawing bin base lines): this is part of m_hgH
   protected int m_hgFootH = 7;    // histogram footer height (for drawing bin base lines): this is part of m_hgH
@@ -40,7 +43,8 @@ public abstract class Node {
   
   // Interaction
   boolean m_bNodeDragged;
-  boolean m_bHasFocus;  
+  boolean m_bHasFocus;
+  boolean m_bMinimised;
   boolean m_rsLeftHandlePressed;
   boolean m_rsRightHandlePressed;
   boolean m_rsBarPressed;
@@ -127,6 +131,7 @@ public abstract class Node {
     m_lbBackgroundColor      = #E0E0E0;
     m_lbForegroundColor      = #101010;
     m_bHasFocus = false;
+    m_bMinimised = false;
     m_bNodeDragged = false;
     m_rsLeftHandlePressed = false;
     m_rsRightHandlePressed = false;
@@ -235,6 +240,12 @@ public abstract class Node {
   }
   
   
+  int getMinimisedH() {
+    // returns the height of the node when minimised
+    return m_mbH;
+  }
+  
+  
   int getCentreX() {
     // returns the x position of the centre of the node
     return (m_x + (m_nodeW / 2));
@@ -320,6 +331,10 @@ public abstract class Node {
 
   void draw(int nodeZoom) {
     
+    if (m_bMinimised) {
+      return;
+    }
+    
     m_nodeZoom = nodeZoom;
     
     pushMatrix();
@@ -354,8 +369,6 @@ public abstract class Node {
     pushStyle();
     pushMatrix();
     
-    int gap = 7;
-
     // draw background
     fill(m_mbBackgroundColor);
     rect(0, 0, m_nodeW, m_mbH);
@@ -367,22 +380,22 @@ public abstract class Node {
       case 2: fill(m_mbLeafColor);  break;
       default: fill(m_mbBackgroundColor);
     }
-    rect(0, 0, m_nodeW, gap /*m_mbH/3*/);
+    rect(0, 0, m_nodeW, m_mbSpacer);
     
     // draw focus indicator
     if (m_bHasFocus) {
       stroke(m_mbFocusColor);
       fill(m_mbFocusColor);
-      rect(gap-1, gap, m_mbWidgetW-(2*gap)+1, m_mbH-(2*gap)+1);
+      rect(m_mbSpacer-1, m_mbSpacer, m_mbWidgetW-(2*m_mbSpacer)+1, m_mbH-(2*m_mbSpacer)+1);
     }    
     
     // draw minimize widget
     fill(m_mbMinWidgetBackgroundColor);
     stroke(m_mbMinWidgetForegroundColor);
-    rect(m_nodeW-m_mbWidgetW+gap, gap, m_mbWidgetW-(2*gap), m_mbH-(2*gap));
+    rect(m_nodeW-m_mbWidgetW+m_mbSpacer, m_mbSpacer, m_mbWidgetW-(2*m_mbSpacer), m_mbH-(2*m_mbSpacer));
     strokeWeight(2);
     strokeCap(SQUARE);
-    line(m_nodeW-m_mbWidgetW+(1*gap), m_mbH-(1*gap)-1, m_nodeW-(1*gap), m_mbH-(1*gap)-1);
+    line(m_nodeW-m_mbWidgetW+m_mbSpacer, m_mbH-m_mbSpacer-1, m_nodeW-m_mbSpacer, m_mbH-m_mbSpacer-1);
     
     popMatrix();
     popStyle();
@@ -524,15 +537,29 @@ public abstract class Node {
   
   
   boolean mouseOver() {
-    // Returns true if the mouse pointer is currently over this node, otherwise false.
-    return (scaledMouseX() >= m_x &&
-            scaledMouseX() < m_x + m_nodeW &&
-            scaledMouseY() >= m_y &&
-            scaledMouseY() <= m_y + m_nodeH);
+    // Returns true if the mouse pointer is currently over this node, otherwise false
+    
+    if (m_bMinimised) {
+      return (mouseX >= m_minimisedX &&
+              mouseX < m_minimisedX + m_nodeW &&
+              mouseY >= m_minimisedY &&
+              mouseY <= m_minimisedY + m_mbH);      
+    }
+    else {
+      return (scaledMouseX() >= m_x &&
+              scaledMouseX() < m_x + m_nodeW &&
+              scaledMouseY() >= m_y &&
+              scaledMouseY() <= m_y + m_nodeH);
+    }
   }
   
   
   void mousePressed() {
+    
+    if (m_bMinimised) {
+      mousePressedMinimised();
+      return;
+    }
     
     m_mousePressX = scaledMouseX();
     m_mousePressY = scaledMouseY();
@@ -542,7 +569,12 @@ public abstract class Node {
       
       if (scaledMouseY() < m_y + m_mbH) {
         ///////////// MOUSE IS IN THE MENU BAR AREA ///////////////////////////////////////////////
-        m_bNodeDragged = true;        
+        if (scaledMouseX() > m_x + m_nodeW - m_mbWidgetW) {
+          minimise();
+        }
+        else {
+          m_bNodeDragged = true;
+        }        
       }
       else if (scaledMouseY() >= m_y + m_mbH && scaledMouseY() < m_y + m_mbH + m_hgH) {
         ///////////// MOUSE IS IN THE HISTOGRAM AREA ///////////////////////////////////////////////
@@ -646,6 +678,10 @@ public abstract class Node {
 
   
   void mouseDragged() {
+    
+    if (m_bMinimised) {
+      return;
+    }
     
     int rsLowOld = m_rsLow;
     int rsHighOld = m_rsHigh;
@@ -761,6 +797,7 @@ public abstract class Node {
     }
     
     if (m_rsLow != rsLowOld || m_rsHigh != rsHighOld) {
+      // If either the low or high range selector handles have moved, we now need to take some further action!
       switch(m_model.m_interactionMode) {
         case SingleNodeBrushing: {
           m_model.brushAllNodesOnOneSelection(this);
@@ -776,7 +813,7 @@ public abstract class Node {
           break;
         }
         default: {
-          println("I shouldn't be here!!");
+          println("In Node.mouseDragged(): I got somewhere I shouldn't be!");
           exit();
         }
       }
@@ -1052,6 +1089,92 @@ public abstract class Node {
       }
     }
     return -1;
+  }
+  
+  
+  void minimise() {
+    assert(!m_bMinimised);
+    m_bMinimised = true;
+    m_bHasFocus = false;
+    m_minimisedX = m_x; // this will be reset by the model when it draws the minimised nodes
+    m_minimisedY = m_y; // this will be reset by the model when it draws the minimised nodes
+    m_model.addMinimisedNode(this);
+  }
+  
+  
+  void maximise() {
+    assert(m_bMinimised);
+    m_bMinimised = false;
+    m_model.removeMinimisedNode(this);
+  }
+  
+  
+  void setMinimisedPos(int x, int y) {
+    m_minimisedX = x;
+    m_minimisedY = y;
+  }
+  
+  
+  boolean minimised() {
+    return m_bMinimised;
+  }
+  
+  
+  void drawMinimised(int nodeZoom) {
+
+    m_nodeZoom = nodeZoom;
+ 
+    pushStyle();
+    pushMatrix();
+    
+    translate(m_minimisedX, m_minimisedY);
+    
+    // draw background
+    fill(m_mbBackgroundColor);
+    rect(0, 0, m_nodeW, m_mbH);
+    
+    // draw root/inter/leaf indication
+    switch (m_role) {
+      case 0: fill(m_mbRootColor);  break;
+      case 1: fill(m_mbInterColor); break;
+      case 2: fill(m_mbLeafColor);  break;
+      default: fill(m_mbBackgroundColor);
+    }
+    rect(0, 0, m_nodeW, m_mbSpacer);  
+    
+    // draw maximise widget
+    fill(m_mbMinWidgetBackgroundColor);
+    stroke(m_mbMinWidgetForegroundColor);
+    rect(m_nodeW-m_mbWidgetW+m_mbSpacer, m_mbSpacer, m_mbWidgetW-(2*m_mbSpacer), m_mbH-(2*m_mbSpacer));
+    strokeWeight(2);
+    strokeCap(SQUARE);
+    line(m_nodeW-m_mbWidgetW+m_mbSpacer, m_mbSpacer+1, m_nodeW-m_mbSpacer, m_mbSpacer+1);
+    
+    // write node name    
+    textFont(m_model.m_mediumFont, 16);
+    fill(m_lbForegroundColor);
+    textAlign(CENTER);
+    text(m_name, m_nodeW/2, m_mbH-6);    
+    
+    popMatrix();
+    popStyle();    
+    
+  }
+  
+  
+  void mousePressedMinimised() {
+    // look for mouse presses on a minimised node and react accordingly
+
+    m_mousePressX = scaledMouseX();
+    m_mousePressY = scaledMouseY();
+        
+    if (mouseOver()) {
+      // the mouse has been pressed within this node, so figure out what we need to do about it!
+      if (mouseX > m_minimisedX + m_nodeW - m_mbWidgetW) {
+        maximise();
+      }
+    }
+    
   }
 
   

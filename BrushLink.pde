@@ -28,6 +28,10 @@ public class BrushLink {
   
   void draw() {
     
+    if (!enabled()) {
+      return;
+    }    
+    
     pushMatrix();
     pushStyle();
     
@@ -93,6 +97,11 @@ public class BrushLink {
       }
       m_strength = constrain(m_strength, -1.0, 1.0);
     }
+  }
+  
+  
+  boolean enabled() {
+    return !(m_node1.minimised() || m_node2.minimised());
   }
   
 }

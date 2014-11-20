@@ -28,6 +28,10 @@ public class CausalLink {
   
   void draw() {
     
+    if (!enabled()) {
+      return;
+    }
+    
     pushMatrix();
     pushStyle();
     
@@ -79,5 +83,10 @@ public class CausalLink {
     m_nodeFrom = m_nodeTo;
     m_nodeTo = tmp;
   }
+  
+  
+  boolean enabled() {
+    return !(m_nodeTo.minimised() || m_nodeFrom.minimised());
+  }  
   
 }
