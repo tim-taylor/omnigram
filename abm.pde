@@ -1,19 +1,15 @@
 /**
-* ABM Interactive Visualization Prototype
+* ABM Interactive Visualization
 *
 * Tim Taylor
 * Monash University
+* tim@tim-taylor.com
 *
-* version: 0.2
-* date: 21 August 2014
+* version: 1.0
+* date: 21 November 2014
 *
 */
 
-// N.B. When specifying the loader file, loader doesn't seem to cope with filenames that are symbolic links!
-//String modelLoaderFile = "auto-mpg-loader.xml";
-//String modelLoaderFile = "breast-cancer-wisconsin-loader.xml";
-//String modelLoaderFile = "pertussis-data-reduced-n-1000-seed-1-clean-loader.xml";
-//String modelLoaderFile = "influenza-data-31-20-n-1000-clean-loader.xml";
 String modelLoaderFile = "";
 int globalZoom = 100;
 int nodeZoom = 100;
@@ -111,17 +107,25 @@ void keyPressed() {
       case '3':
         model.setInteractionMode(InteractionMode.ShowSamples);
         break;
+      case 'B':
+      case 'b':
+        model.requestBrushLinkDelete();
+        break;
       case 'C':
       case 'c':
-        model.requestCausalLinkChange();
+        model.requestCausalLinkDelete();
         break;
       case 'D':
       case 'd':
         model.requestToggleCausalLinkDir();
         break;
+      case 'H':
+      case 'h':  
+        model.toggleHelpScreen();
+        break;
       case 'L':
       case 'l':
-        model.requestBrushLinkChange();
+        model.requestBrushLinkCreate();
         break;
       case 'M':
       case 'm':

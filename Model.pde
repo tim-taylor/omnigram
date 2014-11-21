@@ -71,7 +71,10 @@ public class Model {
   
   // global UI items
   int     m_menuH = 50;
-  boolean m_menuVisible = false;
+  boolean m_bShowHelpScreen = false;
+  boolean m_bShowModeMessage = false;
+  int     m_modeMessageTimer = 0;
+  int     m_modeMessageDuration = 50; // length of time (in number of frames) to show a mode message
   color   m_menuBackgroundColor = 0xFF000000;
   color   m_menuTextColor = 0xFFEEEE30;
   color   m_windowBackgroundColor = 0xFF808080;
@@ -584,6 +587,10 @@ public class Model {
         println("Unexpected Interaction Mode in Model.setInteractionMode!");
       }
     }
+    
+    m_bShowModeMessage = true;
+    m_modeMessageTimer = m_modeMessageDuration;
+
   }
   
   
@@ -679,45 +686,147 @@ public class Model {
     
     // draw minimised nodes
     drawMinimisedNodes();
-    
-    // calculate menu visibility based upon position of mouse pointer
-    if (mouseY < m_menuH) {
-      if (mouseY < pmouseY) {
-        m_menuVisible = true;
-      }
-    }
-    else {
-      m_menuVisible = false;
-    }
-    
+       
     // update ShowSamples data if required
     if (m_interactionMode == InteractionMode.ShowSamples) {
       updateShowSamples();
     }
     
-    // draw menu if required
-    if (m_menuVisible) {
-      fill(m_menuBackgroundColor);
-      rect(0, 0, width, m_menuH);
-      String mode;
-      switch (m_interactionMode) {
-        case SingleNodeBrushing:
-          mode = "Single Node";
-          break;
-        case MultiNodeBrushing:
-          mode = "Multi Node";
-          break;
-        case ShowSamples:
-          mode = "Show Samples";
-          break;
-        default:
-          mode = "(no mode set)";
+    // update the Mode Message timer
+    if (m_modeMessageTimer > 0) {
+      m_modeMessageTimer--;
+      if (m_modeMessageTimer == 0) {
+        m_bShowModeMessage = false;
       }
-      textFont(m_mediumFont, 16);
-      textAlign(LEFT);
-      fill(m_menuTextColor);
-      text(mode, 30, 30);
     }
+      
+    if (m_bShowModeMessage) {
+      int mw = 200;
+      int mh = 75;
+      int mx = (width-mw)/2;
+      int my = (height-mh)/2;
+      fill(m_menuBackgroundColor);
+      rect(mx, my, mw, mh);
+      String mode = getInteractionModeStr();
+      textFont(m_mediumFont, 16);
+      textAlign(CENTER);
+      fill(m_menuTextColor);
+      text(mode, mx+(mw/2), my+(mh/2)+6);
+    }
+    
+    // draw help screen if required
+    if (m_bShowHelpScreen) {
+      drawHelpScreen();
+    }
+    
+  }
+  
+  
+  String getInteractionModeStr() {
+    String mode;
+    switch (m_interactionMode) {
+      case SingleNodeBrushing:
+        mode = "Single Node Brushing";
+        break;
+      case MultiNodeBrushing:
+        mode = "Multi Node Brushing";
+        break;
+      case ShowSamples:
+        mode = "Show Individual Samples";
+        break;
+      default:
+        mode = "(no mode set)";
+    }
+    return mode;
+  }
+  
+  
+  void drawHelpScreen() {
+    pushStyle();
+    pushMatrix();
+    
+    // fade out the current screen content
+    fill(100, 100);
+    rect(0, 0, width, height);
+    
+    // draw a background for the help screen
+    fill(0);
+    rect(50, 25, width-100, height-50);
+    translate(50, 25);
+    
+    textFont(m_mediumFont, 16);
+    textAlign(LEFT);
+    fill(m_menuTextColor);
+    
+    int x1 = 10;
+    int x2 = 310;
+    int x2a = 460;
+    int x3 = 610;
+    int y = 25;
+    int dy = 25;
+    int bigdy = 50;
+    
+    color headingTextColor = #9090D0;
+    
+    String modeStr = getInteractionModeStr();
+    
+    fill(headingTextColor);
+    text("INTERACTION MODES", x1, y);
+    y += dy;
+    fill(m_menuTextColor);
+    text("'1' = Single Node Brushing", x1, y);
+    text("'2' = Multi Node Brushing", x2, y);
+    text("'3' = Show Individual Samples", x3, y);
+    y += dy;
+    text("[Current mode: "+modeStr+"]", x1, y);
+    y += bigdy;
+    fill(headingTextColor);
+    text("ZOOM DISPLAY", x1, y);
+    y += dy;
+    fill(m_menuTextColor);
+    text("'+' = Zoom In", x1, y);
+    text("'-' = Zoom Out", x2a, y);
+    y += bigdy;
+    fill(headingTextColor);
+    text("GENERAL ACTIONS", x1, y);
+    y += dy;
+    fill(m_menuTextColor);
+    text("'H' = Toggle Help Screen On/Off", x1, y);
+    text("'M' = Toggle Display of Mean/Median for Nodes", x2a, y);
+    y += bigdy;
+    fill(headingTextColor);
+    text("ACTIONS IN 'SHOW INDIVIDUAL SAMPLES' MODE", x1, y);
+    y += dy;
+    fill(m_menuTextColor);
+    text("'ARROW UP' = Speed Up Automatic Sample Cycling", x1, y);
+    text("'ARROW DOWN' = Slow Down Automatic Sample Cycling", x2a, y);
+    y += dy;
+    text("'ARROW LEFT' = Single Step Backward Through Samples", x1, y);
+    text("'ARROW RIGHT' = Single Step Forward Through Samples", x2a, y);
+    y += dy;
+    text("'Z' = Decrease Number of Samples", x1, y);
+    text("'X' = Increase Number of Samples", x2a, y);
+    y += dy;
+    text("'S' = Toggle Sample Grouping Random/By Bin", x1, y);
+    y += bigdy;
+    fill(headingTextColor);
+    text("BRUSH LINKS", x1, y);
+    y += dy;
+    fill(m_menuTextColor);
+    text("'L' = Create New Brush Link (on Focal Nodes only)", x1, y);
+    text("'B' = Delete Brush Link (over link handle)", x2a, y);
+    y += bigdy;
+    fill(headingTextColor);
+    text("CAUSAL LINKS", x1, y);
+    y += dy;
+    fill(m_menuTextColor);
+    text("'D' = Toggle Causal Link Direction (over link handle)", x1, y);
+    text("'C' = Delete Causal Link (over link handle)", x2a, y);
+    y += dy;
+    text("'R' = Reinitialise Causal Links", x1, y);
+    
+    popMatrix();
+    popStyle();
   }
   
   
@@ -766,6 +875,7 @@ public class Model {
     Collections.shuffle(m_ssSamplesToDisplay);
     m_ssDisplayIdx = 0;
     
+    // And finally create color palette for the samples
     if (m_ssDisplayMode == 1 && ffNode != null) {
       // assign hue for each sample according to which bin it belongs to in the focal node
       ffNode.matchSampleBinsToColors(m_ssSamplesToDisplay, m_ssSampleHues);
@@ -824,7 +934,6 @@ public class Model {
     // Decrease the number of samples to be displayed in ShowSamples mode
     if (m_ssMaxSamplesToDisplay > 1) {
       m_ssMaxSamplesToDisplay--;
-      //resetSampleHueList();
     }
   }
   
@@ -833,7 +942,6 @@ public class Model {
     // Increase the number of samples to be displayed in ShowSamples mode
     if ((m_ssMaxSamplesToDisplay < 100) && (m_ssMaxSamplesToDisplay < m_allSelectedSamples.size())) {
       m_ssMaxSamplesToDisplay++;
-      //resetSampleHueList();
     }
   }
   
@@ -842,28 +950,17 @@ public class Model {
     // returns a Hue value between 0 and 255 to be used for displaying a specific sample in ShowSamples mode,
     // from the current palatte defined in m_ssSampleHues according to the index number passed in
     
-    //assert(sampleDisplayIdx < m_ssSampleHues.size());
-    
     return m_ssSampleHues.get(sampleDisplayIdx % m_ssSampleHues.size());
   }
-  
-  
-  /*
-  void resetSampleHueList() {
-    // Repopulate the m_ssSampleHues list with a palette of hues equally spaced between 0 and 255 according
-    // to the number of samples specified in m_ssMaxSamplesToDisplay. Then randomly shuffle the order of
-    // the palatte to remove any correlation between sameple order and color
-    
-    m_ssSampleHues.clear();
-    for (int i = 0; i < m_ssMaxSamplesToDisplay; i++) {
-      m_ssSampleHues.add((i*255)/m_ssMaxSamplesToDisplay);
-    }
-    Collections.shuffle(m_ssSampleHues);
-  }
-  */
 
   
   void mousePressed() {
+    
+    if (m_bShowHelpScreen) {
+      hideHelpScreen();
+      return;
+    }
+    
     checkAllNodesSafe();
     for (Node node : m_allNodes) {
       node.mousePressed();
@@ -890,7 +987,7 @@ public class Model {
   }
   
   
-  void requestCausalLinkChange() {
+  void requestCausalLinkDelete() {
     // The user has pressed 'C' to delete a casual link.
     // Check whether the mouse pointer is currently over a causal link's control handle.
     // If so, delete that link, otherwise do nothing.
@@ -918,23 +1015,27 @@ public class Model {
   }
   
   
-  void requestBrushLinkChange() {
-    // The user has pressed 'L' to create a new brush link or to delete an existing link
-    // We first look at the case of deleting an existing link, by checking if the mouse pointer is
-    // currently over a link's control handle. If so, we delete that link.
-    // Otherwise, we check if the mouse pointer is currently over a node, and whether we have already
-    // initiated a new brush link creation process (in which case this is the second node of the link
-    // rather than the first).
+  void requestBrushLinkDelete() {
+    // The user has pressed 'B' to delete an existing brush link.
+    // This method checks if the mouse pointer is currently over a link's control handle.
+    // If so, we delete that link. If the pointer is not over any brush link's handle,
+    // do nothing.
     
-    // First check for deletion of an existing link
     for (BrushLink link : m_brushLinks) {
       if (link.mouseOver()) {
         m_brushLinks.remove(link);
         return;
       }
     }    
+  }
+  
+  
+  void requestBrushLinkCreate() {
+    // The user has pressed 'L' to create a new brush link.
+    // This method checks if the mouse pointer is currently over a node, and whether we have already
+    // initiated a new brush link creation process (in which case this is the second node of the link
+    // rather than the first).
     
-    // Failing that, look for creation of a new link
     checkAllNodesSafe();
     for (Node node : m_allNodes) {
       if (node.mouseOver()) {
@@ -1070,6 +1171,21 @@ public class Model {
       }
       
     }
+  }
+  
+  
+  void toggleHelpScreen() {
+    m_bShowHelpScreen = !m_bShowHelpScreen;
+  }
+  
+  
+  void showHelpScreen() {
+    m_bShowHelpScreen = true;
+  }
+  
+  
+  void hideHelpScreen() {
+    m_bShowHelpScreen = false;
   }
 
 
