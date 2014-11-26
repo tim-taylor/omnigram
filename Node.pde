@@ -301,15 +301,14 @@ public abstract class Node {
     int binx = gap;
     int maxH = 0;
     
-    
-    println("Node "+m_name+": number of samples per bin:");
+    //println("Node "+m_name+": number of samples per bin:");
     // create a new HistogramBin object for each bin
     for (int i=0; i<m_hgNumBins; i++) {
       HistogramBin bin = new HistogramBin(this, m_hgBins.size(), m_hgBinSampleCounts[i], sampleIDs.get(i), binx, m_hgH - m_hgFootH);
       m_hgBins.add(bin);
       maxH = max(maxH, bin.getH());
       binx += bin.m_w + gap;
-      println("  bin "+(i+1)+": "+m_hgBinSampleCounts[i]);
+      //println("  bin "+(i+1)+": "+m_hgBinSampleCounts[i]);
     }
     
     // reset width of node according to space taken up by the bins

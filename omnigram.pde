@@ -1,12 +1,18 @@
 /**
-* ABM Interactive Visualization
+* Omnigram Explorer
+* An Interactive Data Exploration Tool
 *
 * Tim Taylor
 * Monash University
 * tim@tim-taylor.com
 *
 * version: 1.0
-* date: 21 November 2014
+* date: 26 November 2014
+*
+* Notes on exporting to platform-specific binaries:
+* - Export to Linux works best NOT as a full screen mode app [and with size less than full screen in setup()]
+* - Export to Windows works best as a full screen mode app [and with size = full screen in setup()]
+* - Export to MacOS: for current version of Processing (2.2.1), only works when exporting from a Mac?
 *
 */
 
@@ -17,14 +23,15 @@ Model model;
 
 
 void setup() {
-  size((displayWidth*80)/100, (displayHeight*80)/100);
+  size((displayWidth*80)/100, (displayHeight*80)/100); // best for Linux
+  //size(displayWidth, displayHeight); // best for Windows
   if (frame != null) {
     frame.setResizable(true);
   }
   smooth();
   noStroke();
   noLoop();
-  selectInput("Select a model definition XML file:", "modelFileSelected");
+  selectInput("Select a model definition XML file", "modelFileSelected");
 }
 
 

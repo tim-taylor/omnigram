@@ -47,36 +47,21 @@ class HistogramBin {
     
     m_x = x;
     m_y = y;
-    setBinDimensions(); // set m_w and m_h according to visualisation mode
+    setBinDimensions(); // set m_w and m_h
   }
   
   
   void setBinDimensions() {
+    // calculate the bin's width and height
+    
     int dh = m_node.m_hgDefaultMaxBinH;
     int dw = m_node.m_hgDefaultBinW;
     int numSamplesAll = m_node.m_model.m_data.size();
     float nodeSF = m_node.m_model.m_nodeBinScaleFactor;
-    
-    switch (m_node.m_model.m_visualisationMode) {
-      case FullAutoHeightAdjust: {
-        m_w = dw;
-        m_h = (int)((nodeSF * (float)(dh * m_numSamples))/((float)numSamplesAll));
-        m_referenceH = m_h;
-        // TO DO: need to potentially adjust m_node.m_hgH, plus adjust positions of other nodes
-        break;
-      }
-      case Scaled: {
-        int maxs = m_node.getMaxSamplesPerBin();
-        m_h = (dh * m_numSamples) / maxs;
-        m_w = dw;
-        break;
-      }
-      case FullAreaConserved:
-      default: {
-        // TO DO...
-        break;
-      }
-    }
+
+    m_w = dw;
+    m_h = (int)((nodeSF * (float)(dh * m_numSamples))/((float)numSamplesAll));
+    m_referenceH = m_h;
   }
   
   
@@ -121,29 +106,12 @@ class HistogramBin {
     return m_x + m_w;
   }
   
-   
+  
   void draw() {
-    pushStyle();
-    switch (m_node.m_model.m_visualisationMode) {
-    case FullAutoHeightAdjust: {
-      drawFullAutoHeightAdjust();
-      break;
-    }
-    case Scaled: {
-      drawScaled();
-      break;
-    }
-    case FullAreaConserved:
-    default: {
-      drawFullAreaConserved();
-    }
-    }
-    popStyle();
-  }
-  
-  
-  void drawFullAutoHeightAdjust() {
     // draw the bin
+    
+    pushStyle();   
+
     if (m_h > 0) {
       stroke(m_strokeColor);
       
@@ -169,16 +137,6 @@ class HistogramBin {
           // in ShowSamples mode, draw the individual samples
           if (m_node.m_model.m_interactionMode == InteractionMode.ShowSamples) {
             pushStyle();
-            
-            /*
-            if (m_node.hasFocus()) {
-              println("Hello from "+m_node.m_name);
-              println(m_node.m_model.m_ssSamplesToDisplay.size());
-              println(m_node.m_model.m_allSelectedSamples.size());
-              println(m_node.m_model.m_ssMaxSamplesToDisplay);
-              println(m_node.m_model.m_ssDisplayIdx);
-            }
-            */
             
             if (!m_node.hasFocus()) {
               // in ShowSamples mode, partially fade out bins in non-focal nodes
@@ -247,6 +205,8 @@ class HistogramBin {
     strokeWeight(m_node.m_hgBaseStrokeWeight);
     int baseY = m_y + (m_node.m_hgFootH / 2);
     line(m_x, baseY, m_x+m_w, baseY);
+    
+    popStyle();
   }
   
   
@@ -286,16 +246,6 @@ class HistogramBin {
     // draw unbrushed section
     fill(m_nonFocalNonBrushedFillColor);
     rect(m_x, m_y-m_h, m_w, m_h-cumH);
-  }
-  
-  
-  void drawScaled() {
-    // TO DO...
-  }
-  
-  
-  void drawFullAreaConserved() {
-    // TO DO...
   }
 
   

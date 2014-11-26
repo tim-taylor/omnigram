@@ -28,10 +28,12 @@ public class ContinuousNode extends Node {
   void initialiseHistogram() {
     m_hgNumBins = m_sMaxBins;
     
+    /*
     println("Histogram boundary values for "+m_name);
     for (int i=0; i<m_hgNumBins; i++) {
       println(getHistogramBinLowVal(i));
-    }    
+    }
+    */   
     
     initialiseHistogramCommon(); 
   }

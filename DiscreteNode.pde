@@ -28,10 +28,12 @@ public class DiscreteNode extends Node {
     int dataRange = getFullRange();
     m_hgNumBins = (dataRange > m_sMaxBins) ? m_sMaxBins : dataRange;
     
+    /*
     println("Histogram boundary values for "+m_name);
     for (int i=0; i<m_hgNumBins; i++) {
       println(getHistogramBinLowVal(i));
     }
+    */
     
     initialiseHistogramCommon();
   }

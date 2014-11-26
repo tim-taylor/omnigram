@@ -52,8 +52,7 @@ public class Model {
   ArrayList<Integer> m_ssSampleHues;       // list of color hues used for displaying samples
   int m_ssDisplayMode = 1;                 // 0=assign colors to samples at random, 1=assign according to bin in focal node
   
-  // mode of visualisation
-  VisualisationMode m_visualisationMode = VisualisationMode.FullAutoHeightAdjust;
+  // visualisation options
   boolean m_visTiled = true;               // display histogram bins as tiled or continuous?
   boolean m_showMedians = false;           // display histogram medians rather than means in range selector bar?
   boolean m_showCausalLinks = true;        // display causal links?
@@ -231,17 +230,17 @@ public class Model {
       switch (role) {
         case 0: {
           m_rnodes.add(newnode);
-          println("Adding new rnode " + newnode.m_name);
+          //println("Adding new rnode " + newnode.m_name);
           break;
         }
         case 1: {
           m_inodes.add(newnode);
-          println("Adding new inode " + newnode.m_name);
+          //println("Adding new inode " + newnode.m_name);
           break;
         }
         case 2: {
           m_lnodes.add(newnode);
-          println("Adding new lnode " + newnode.m_name);
+          //println("Adding new lnode " + newnode.m_name);
           break;
         }
         default: {
