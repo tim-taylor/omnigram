@@ -1,5 +1,13 @@
 <?xml version="1.0"?>
 
+<!--
+This file defines an example model suitable for loading into Omingram Explorer
+(http://www.tim-taylor.com/omnigram).
+
+The data used by the example is from the Auto-Mpg dataset available from the
+UC Irvine Machine Learning Repository at https://archive.ics.uci.edu/ml/datasets/Auto+MPG
+-->
+
 <model>
 	
 	<general data="auto-mpg.data" has-labels="true" label-filecol="9" live="false">
