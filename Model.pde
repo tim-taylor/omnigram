@@ -145,7 +145,7 @@ public class Model {
       m_numInterCols = appearance.getInt("num-inter-cols", m_numInterCols);
       m_numLeafCols = appearance.getInt("num-leaf-cols", m_numLeafCols);
       String showCausalLinks = appearance.getString("show-causal-links");
-      m_showCausalLinks = (showCausalLinks != null) && showCausalLinks.equals("1");
+      m_showCausalLinks = (showCausalLinks != null) && showCausalLinks.equals("true");
     }
     
     
@@ -370,7 +370,7 @@ public class Model {
 
           if (node.m_dataFileCol == thisFileCol) {
             
-            if (m_modelDataLabelFileCol == thisFileCol) {
+            if (m_modelHasDataLabels && (m_modelDataLabelFileCol == thisFileCol)) {
               label = data[j];
             }
             else if (node instanceof DiscreteNode) {
