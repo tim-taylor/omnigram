@@ -17,7 +17,7 @@ UC Irvine Machine Learning Repository at https://archive.ics.uci.edu/ml/datasets
 	<appearance node-bin-scale-factor="5.0" node-default-height="150" node-default-width="330"
 			 min-internode-gap="20"
 			 num-root-cols="2" num-inter-cols="1" num-leaf-cols="1"
-			 show-causal-links="1">
+			 show-causal-links="true">
 	</appearance>
 	
 	<nodes>
