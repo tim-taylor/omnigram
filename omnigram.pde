@@ -12,7 +12,7 @@
 * Notes on exporting to platform-specific binaries:
 * - Export to Linux works best NOT as a full screen mode app [and with size less than full screen in setup()]
 * - Export to Windows works best as a full screen mode app [and with size = full screen in setup()]
-* - Export to MacOS: for current version of Processing (2.2.1), only works when exporting from a Mac?
+* - Export to MacOS: for current version of Processing (2.2.1), only works when exporting from a Mac
 *
 */
 
