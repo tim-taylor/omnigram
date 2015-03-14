@@ -6,8 +6,8 @@
 * Monash University
 * tim@tim-taylor.com
 *
-* version: 1.0
-* date: 26 November 2014
+* version: 1.1
+* date: 14 March 2015
 *
 * Notes on exporting to platform-specific binaries:
 * - Export to Linux works best NOT as a full screen mode app [and with size less than full screen in setup()]
