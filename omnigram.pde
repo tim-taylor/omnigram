@@ -112,8 +112,11 @@ void keyPressed() {
         model.setInteractionMode(InteractionMode.MultiNodeBrushing);
         break;
       case '3':
-        model.setInteractionMode(InteractionMode.ShowSamples);
+        model.setInteractionMode(InteractionMode.ColourBins);
         break;
+      case '4':
+        model.setInteractionMode(InteractionMode.ShowSamples);
+        break;        
       case 'B':
       case 'b':
         model.requestBrushLinkDelete();

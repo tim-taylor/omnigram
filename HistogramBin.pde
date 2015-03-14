@@ -137,60 +137,18 @@ class HistogramBin {
           
           // in ShowSamples mode, draw the individual samples
           if (m_node.m_model.m_interactionMode == InteractionMode.ShowSamples) {
-            pushStyle();
-            
-            if (!m_node.hasFocus()) {
-              // in ShowSamples mode, partially fade out bins in non-focal nodes
-              fill(255, 220);
-              rect(m_x, m_y-m_h, m_w, m_h);
-            }
-            
-            colorMode(HSB);
-            stroke(0);
-            int numInBin = 0;
-            ArrayList<Integer> samples = m_node.m_model.m_ssSamplesToDisplay;     // a list of all sampleIDs currently selected
-            int dIdx = m_node.m_model.m_ssDisplayIdx;          // index of first sample in m_ssSamplesToDisplay to be displayed
-            int numSamplesToDisplay = m_node.m_model.m_ssMaxSamplesToDisplay;
-                        
-            if (!samples.isEmpty()) {
-              
-              // For model.m_ssDisplayMode==1|2, we need to first work out the color of each sample to
-              // be displayed in this bin, then sort the colors so that we display contiguous blocks
-              // of each color.
-              ArrayList<Integer> sortedHues = new ArrayList<Integer>();
-              if (m_node.m_model.m_ssDisplayMode == 1 || m_node.m_model.m_ssDisplayMode == 2) {
-                for (int i = 0; i < numSamplesToDisplay; i++) {
-                  int sID = samples.get( (dIdx+i) % (samples.size()) );
-                  int sIdx = m_sampleIDs.indexOf(sID);
-                  if (sIdx >= 0) {                             // this sample appears in this bin, so record its color               
-                    sortedHues.add(m_node.m_model.getSampleHue(dIdx+i));
-                  }
-                }
-                Collections.sort(sortedHues);
-              }
-              
-              // Now loop through each sample to be displayed, and check whether it is in this bin.
-              // If so, display it in the approriate color
-              color c = 0;              
-              for (int i = 0; i < numSamplesToDisplay; i++) {  // loop through the required number of samples to display
-                int sID = samples.get( (dIdx+i) % (samples.size()) );
-                int sIdx = m_sampleIDs.indexOf(sID);
-                if (sIdx >= 0) {                               // this sample appears in this bin, so display it!
-                  numInBin++;
-                  int y = m_y - (numInBin*m_w) + m_w/2;
-                  if (m_node.m_model.m_ssDisplayMode == 1 || m_node.m_model.m_ssDisplayMode == 2)
-                    c = color(sortedHues.get(numInBin-1), 255, 255);
-                  else
-                    c = color(m_node.m_model.getSampleHue(dIdx+i), 255, 255);
-                  fill(c);
-                  ellipse(m_x + (m_w/2), y, m_w, m_w);
-                }
-              }
-            }
-            
-            popStyle();
+            drawIndividualSamples();
           }
+          /*
+          else if (m_node.m_model.m_interactionMode == InteractionMode.ColourBins) {
+            drawColourBins();
+          }
+          */
           
+          break;
+        }
+        case ColourBins: {      
+          drawColourBins();
           break;
         }
         case Unassigned:
@@ -209,6 +167,145 @@ class HistogramBin {
     
     popStyle();
   }
+  
+  
+  void drawIndividualSamples() {
+    // helper method for drawing
+    // draws individual samples as circles in the correct colour for ShowSamples mode
+    
+    pushStyle();
+    
+    if (!m_node.hasFocus()) {
+      // in ShowSamples mode, partially fade out bins in non-focal nodes
+      fill(255, 220);
+      rect(m_x, m_y-m_h, m_w, m_h);
+    }
+    
+    colorMode(HSB);
+    stroke(0);
+    int numInBin = 0;
+    ArrayList<Integer> samples = m_node.m_model.m_ssSamplesToDisplay;     // a list of all sampleIDs currently selected
+    int dIdx = m_node.m_model.m_ssDisplayIdx;          // index of first sample in m_ssSamplesToDisplay to be displayed
+    int numSamplesToDisplay = m_node.m_model.m_ssMaxSamplesToDisplay;
+                
+    if (!samples.isEmpty()) {
+      
+      // For model.m_ssDisplayMode==1|2, we need to first work out the color of each sample to
+      // be displayed in this bin, then sort the colors so that we display contiguous blocks
+      // of each color.
+      ArrayList<Integer> sortedHues = new ArrayList<Integer>();
+      if (m_node.m_model.m_ssDisplayMode == 1 || m_node.m_model.m_ssDisplayMode == 2) {
+        for (int i = 0; i < numSamplesToDisplay; i++) {
+          int sID = samples.get( (dIdx+i) % (samples.size()) );
+          int sIdx = m_sampleIDs.indexOf(sID);
+          if (sIdx >= 0) {                             // this sample appears in this bin, so record its color               
+            sortedHues.add(m_node.m_model.getSampleHue(dIdx+i));
+          }
+        }
+        Collections.sort(sortedHues);
+      }
+      
+      // Now loop through each sample to be displayed, and check whether it is in this bin.
+      // If so, display it in the approriate color
+      color c = 0;              
+      for (int i = 0; i < numSamplesToDisplay; i++) {  // loop through the required number of samples to display
+        int sID = samples.get( (dIdx+i) % (samples.size()) );
+        int sIdx = m_sampleIDs.indexOf(sID);
+        if (sIdx >= 0) {                               // this sample appears in this bin, so display it!
+          numInBin++;
+          int y = m_y - (numInBin*m_w) + m_w/2;
+          if (m_node.m_model.m_ssDisplayMode == 1 || m_node.m_model.m_ssDisplayMode == 2)
+            c = color(sortedHues.get(numInBin-1), 255, 255);
+          else
+            c = color(m_node.m_model.getSampleHue(dIdx+i), 255, 255);
+          fill(c);
+          ellipse(m_x + (m_w/2), y, m_w, m_w);
+        }
+      }
+    }
+    
+    popStyle();    
+  }
+  
+  
+  void drawColourBins() {
+    // helper method for drawing
+    // draws sections of bin in different colours in ColourBins mode
+    
+    pushStyle();
+    
+    fill(m_focalOutsideRangeSelFillColor);
+    rect(m_x, m_y-m_h, m_w, m_h); 
+     
+    colorMode(HSB);
+    stroke(0);
+
+    ArrayList<Integer> samples = m_node.m_model.m_ssSamplesToDisplay;     // a list of all sampleIDs currently selected
+                
+    if (!samples.isEmpty()) {
+      
+      // We need to first work out the color of each sample to be displayed in this bin, 
+      // then sort the colors so that we display contiguous blocks of each color.
+      ArrayList<Integer> sortedHues = new ArrayList<Integer>();
+      int idx = 0;
+      for (Integer id : samples) { 
+        int sIdx = m_sampleIDs.indexOf(id.intValue());
+        if (sIdx >= 0) {                             // this sample appears in this bin, so record its color               
+          sortedHues.add(m_node.m_model.getSampleHue(idx));
+        }
+        idx++;
+      }
+      Collections.sort(sortedHues);
+      
+      if (!sortedHues.isEmpty()) {
+        int numSelectedSamples = sortedHues.size();
+        ArrayList<Integer> hues = new ArrayList<Integer>();
+        ArrayList<Integer> counts = new ArrayList<Integer>();
+        int currentHue = sortedHues.get(0);
+        int currentCount = 0;
+        for (Integer hue : sortedHues) {
+          if (hue != currentHue) {
+            hues.add(currentHue);
+            counts.add(currentCount);
+            currentHue = hue;
+            currentCount = 1;
+          }
+          else {
+            currentCount++;
+          }
+        }
+        hues.add(currentHue);
+        counts.add(currentCount);
+        
+        //println((m_node.hasFocus())?"FOCUS NODE*********************":"NON-FOCUS NODE");
+        /*
+        if (m_node.m_name.equals("cp")) {
+          println(m_node.m_name);
+          println(numSelectedSamples + " :: " + hues.size() + " :: " + sortedHues.size());
+        }
+        */
+        
+        int dy = 0;
+        int dh = 0;
+        int fullh = (m_h * numSelectedSamples) / m_numSamples;
+        color c = 0;
+        for (int i=0; i < hues.size(); i++) {
+          c = color(hues.get(i), 255, 255);
+          dh = round(((float)(counts.get(i) * fullh)) / (float)numSelectedSamples);
+          /*
+          if (m_node.m_name.equals("cp")) {
+            println(i+": "+counts.get(i)+", "+numSelectedSamples+", "+dh+", "+dy);
+          }
+          */
+          fill(c);
+          rect(m_x, m_y-dy-dh, m_w, dh);
+          dy += dh;
+        }
+      }
+    }
+    
+    popStyle();    
+  }  
   
   
   void drawBrushedBin(int numBrushes) {

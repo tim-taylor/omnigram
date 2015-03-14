@@ -599,6 +599,12 @@ public abstract class Node {
             m_model.brushAllNodesOnMultiSelection();          
             break;
           }
+          case ColourBins: {
+            m_model.setSingleFocus(m_id);
+            m_model.brushAllNodesOnOneSelection(this);              
+            m_model.updateSelectedSampleList();            
+            break;
+          }
           case ShowSamples: {
             //m_model.toggleMultiFocus(m_id);
             //m_model.brushAllNodesOnMultiSelection();
@@ -818,6 +824,11 @@ public abstract class Node {
           m_model.brushAllNodesOnMultiSelection();
           break;
         }
+        case ColourBins: {
+          m_model.brushAllNodesOnOneSelection(this);
+          m_model.updateSelectedSampleList();          
+          break;
+        }
         case ShowSamples: {
           //m_model.brushAllNodesOnMultiSelection();
           m_model.brushAllNodesOnOneSelection(this);
@@ -888,6 +899,8 @@ public abstract class Node {
       case SingleNodeBrushing:
         return m_bHasFocus;
       case MultiNodeBrushing:
+        return m_bHasFocus;
+      case ColourBins:
         return m_bHasFocus;
       case ShowSamples:
         return m_bHasFocus;
@@ -1065,7 +1078,7 @@ public abstract class Node {
   
   void matchSampleBinsToColors(ArrayList<Integer> sampleIDs, ArrayList<Integer> hues) {
     // Takes a list of sampleIDs as input, and a list of hues to be returned as output. This list of
-    // hues is first emptied. Then, so through each sample, and add an entry at the corresponding
+    // hues is first emptied. Then, go through each sample, and add an entry at the corresponding
     // position in the hue list according to the bin in which that sample is found.
     
     // First, empty the list of hues to start with a clean slate
@@ -1077,7 +1090,7 @@ public abstract class Node {
       binHues.add((i*255)/m_hgNumBins);
     }
     
-    if (m_model.m_ssDisplayMode == 1) {
+    if (m_model.m_interactionMode == InteractionMode.ShowSamples && m_model.m_ssDisplayMode == 1) {
       Collections.shuffle(binHues);  // shuffle the hues so adjacent bins have very different hues
     }
     

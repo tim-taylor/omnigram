@@ -574,6 +574,24 @@ public class Model {
         redraw();
         break;
       }
+      case ColourBins: {
+        m_interactionMode = InteractionMode.ColourBins;
+        resetAllBrushing();
+        checkAllNodesSafe();
+        // now ensure that at most one Node has the focus
+        for (Node node : m_allNodes) {
+          if (node.m_bHasFocus) {
+            setSingleFocus(node.m_id);
+            brushAllNodesOnOneSelection(node);
+            //redraw();
+            break;
+          }
+        }        
+        //m_ssTimer = 0;
+        updateSelectedSampleList();
+        redraw();
+        break;        
+      }
       case ShowSamples: {
         m_interactionMode = InteractionMode.ShowSamples;
         resetAllBrushing();
@@ -584,7 +602,7 @@ public class Model {
           if (node.m_bHasFocus) {
             setSingleFocus(node.m_id);
             brushAllNodesOnOneSelection(node);
-            redraw();
+            //redraw();
             break;
           }
         }        
@@ -742,6 +760,9 @@ public class Model {
       case MultiNodeBrushing:
         mode = "Multi Node Brushing";
         break;
+      case ColourBins:
+        mode = "Colour Bins";
+        break;
       case ShowSamples:
         mode = "Show Individual Samples";
         break;
@@ -762,7 +783,7 @@ public class Model {
     
     // draw a background for the help screen
     fill(0);
-    rect(50, 25, width-100, height-50);
+    rect(50, 10, width-100, height-20);
     translate(50, 25);
     
     textFont(m_mediumFont, 16);
@@ -773,7 +794,7 @@ public class Model {
     int x2 = 310;
     int x2a = 460;
     int x3 = 610;
-    int y = 25;
+    int y = 15;
     int dy = 25;
     int bigdy = 50;
     
@@ -786,8 +807,10 @@ public class Model {
     y += dy;
     fill(m_menuTextColor);
     text("'1' = Single Node Brushing", x1, y);
-    text("'2' = Multi Node Brushing", x2, y);
-    text("'3' = Show Individual Samples", x3, y);
+    text("'2' = Multi Node Brushing", x2a, y);
+    y += dy;
+    text("'3' = Colour Bins", x1, y);
+    text("'4' = Show Individual Samples", x2a, y);
     y += dy;
     text("[Current mode: "+modeStr+"]", x1, y);
     y += bigdy;
@@ -818,7 +841,7 @@ public class Model {
     text("'Z' = Decrease Number of Samples", x1, y);
     text("'X' = Increase Number of Samples", x2a, y);
     y += dy;
-    text("'S' = Toggle Sample Grouping Random/By Bin", x1, y);
+    text("'S' = Switch between sample colouring modes: random / by bin (bin colours random) / by bin (bin colours ordered)", x1, y);
     y += bigdy;
     fill(headingTextColor);
     text("BRUSH LINKS", x1, y);
@@ -887,7 +910,13 @@ public class Model {
     m_ssDisplayIdx = 0;
     
     // And finally create color palette for the samples
-    if ((m_ssDisplayMode == 1 || m_ssDisplayMode == 2) && ffNode != null) {
+    boolean matchColoursToBins = false;
+    if (m_interactionMode == InteractionMode.ShowSamples && (m_ssDisplayMode == 1 || m_ssDisplayMode == 2))
+      matchColoursToBins = true;
+    else if (m_interactionMode == InteractionMode.ColourBins)
+      matchColoursToBins = true;
+      
+    if (matchColoursToBins && ffNode != null) {
       // assign hue for each sample according to which bin it belongs to in the focal node
       ffNode.matchSampleBinsToColors(m_ssSamplesToDisplay, m_ssSampleHues);
     }
@@ -1058,7 +1087,7 @@ public class Model {
           }
           else {
             // tried to create a link, but it is not valid. Indicate this to the user
-            // TO DO...
+            // TO DO... (at some point in the future)
           }
           m_newBrushLinkNode1.setBrushLinkUnderConstruction(false);
           m_bNewBrushLinkUnderConstruction = false;
