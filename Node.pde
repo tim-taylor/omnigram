@@ -287,6 +287,10 @@ public abstract class Node {
     for (ArrayList<Number> row : m_model.m_data) {
       Number data = row.get(m_dataArrayCol); // from this data sample, get the column corresponding to this node
       int idx = getHistogramIndex(data);     // get the bin (index of m_hgBins) that this data value belongs to
+      if (idx < 0) {
+        println("Out of range number "+data.toString()+" encountered in column "+(m_dataArrayCol+1)+" of line "+(rowNum+2)+" of data file. Aborting.");
+        exit();
+      }
       //println(m_name+": rowNum="+rowNum+", m_dataArrayCol="+m_dataArrayCol+", data="+data+", idx="+idx);
       m_hgBinSampleCounts[idx]++;
       sampleIDs.get(idx).add(rowNum);
@@ -1069,7 +1073,7 @@ public abstract class Node {
     for (int i=0; i<m_hgNumBins; i++) {
       binHues.add((i*255)/m_hgNumBins);
     }
-    Collections.shuffle(binHues);  // shuffle the hues so adjacent bins have very different hues
+    //CHANGED//Collections.shuffle(binHues);  // shuffle the hues so adjacent bins have very different hues
     
     // Finally, for each sample in the list, determine which bin it belongs to and assign
     // a hue accordingly

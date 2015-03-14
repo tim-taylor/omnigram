@@ -40,10 +40,16 @@ public class DiscreteNode extends Node {
   
   
   int getHistogramIndex(Number num) {
-    // return the index in node.m_hgBins corresponding to the data value passed in (i.e. which
-    // bin does that value belong to)
+    // Return the index in node.m_hgBins corresponding to the data value passed in (i.e. which
+    // bin does that value belong to). Returns -1 if num is outside of the defined range of the Node
+    
     int iNum = num.intValue();
-    return (((iNum - m_rangeMin) * m_hgNumBins) / (m_rangeMax - m_rangeMin + 1));
+    if (iNum < m_rangeMin || iNum > m_rangeMax) {
+      return -1;
+    }
+    else {
+      return (((iNum - m_rangeMin) * m_hgNumBins) / (m_rangeMax - m_rangeMin + 1));
+    }
   }
   
   

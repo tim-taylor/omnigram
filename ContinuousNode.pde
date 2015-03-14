@@ -40,12 +40,17 @@ public class ContinuousNode extends Node {
   
   
   int getHistogramIndex(Number num) {
-    // return the index in node.m_hgBins corresponding to the data value passed in (i.e. which
-    // bin does that value belong to)
+    // Return the index in node.m_hgBins corresponding to the data value passed in (i.e. which
+    // bin does that value belong to). Returns -1 if num is outside of the defined range of the Node
     float fNum = num.floatValue();
-    int idx = (int)(((fNum - m_rangeMin) * m_hgNumBins) / (m_rangeMax - m_rangeMin));
-    if (idx==m_hgNumBins) idx--; // not very elegant, but it works
-    return idx;
+    if ((fNum < (m_rangeMin - 0.00001)) || (fNum > (m_rangeMax + 0.00001))) {
+      return -1;
+    }
+    else {
+      int idx = (int)(((fNum - m_rangeMin) * m_hgNumBins) / (m_rangeMax - m_rangeMin));
+      if (idx==m_hgNumBins) idx--; // not very elegant, but it works
+      return idx;
+    }
   }
   
   
