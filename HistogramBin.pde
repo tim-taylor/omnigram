@@ -131,7 +131,8 @@ class HistogramBin {
           }
           else {
             // this is a non-focal node for single-node brushing
-            drawBrushedBin((m_node.m_model.m_interactionMode == InteractionMode.SingleNodeBrushing) ? 1 : m_node.m_hgNumBrushes);
+            boolean singleNodeBrushing = (m_node.m_model.m_interactionMode != InteractionMode.MultiNodeBrushing);
+            drawBrushedBin(singleNodeBrushing ? 1 : m_node.m_hgNumBrushes);
           }
           
           // in ShowSamples mode, draw the individual samples
@@ -153,11 +154,11 @@ class HistogramBin {
                         
             if (!samples.isEmpty()) {
               
-              // For model.m_ssDisplayMode==1, we need to first work out the color of each sample to
+              // For model.m_ssDisplayMode==1|2, we need to first work out the color of each sample to
               // be displayed in this bin, then sort the colors so that we display contiguous blocks
               // of each color.
               ArrayList<Integer> sortedHues = new ArrayList<Integer>();
-              if (m_node.m_model.m_ssDisplayMode == 1) {
+              if (m_node.m_model.m_ssDisplayMode == 1 || m_node.m_model.m_ssDisplayMode == 2) {
                 for (int i = 0; i < numSamplesToDisplay; i++) {
                   int sID = samples.get( (dIdx+i) % (samples.size()) );
                   int sIdx = m_sampleIDs.indexOf(sID);
@@ -177,7 +178,7 @@ class HistogramBin {
                 if (sIdx >= 0) {                               // this sample appears in this bin, so display it!
                   numInBin++;
                   int y = m_y - (numInBin*m_w) + m_w/2;
-                  if (m_node.m_model.m_ssDisplayMode == 1)
+                  if (m_node.m_model.m_ssDisplayMode == 1 || m_node.m_model.m_ssDisplayMode == 2)
                     c = color(sortedHues.get(numInBin-1), 255, 255);
                   else
                     c = color(m_node.m_model.getSampleHue(dIdx+i), 255, 255);

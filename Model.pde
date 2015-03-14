@@ -50,7 +50,9 @@ public class Model {
   ArrayList<Integer> m_ssSamplesToDisplay; // a list of all samples currently in m_allSelectedSamples, in random order
   int m_ssDisplayIdx = 0;                  // index of first currently displayed sample in m_ssSamplesToDisplay
   ArrayList<Integer> m_ssSampleHues;       // list of color hues used for displaying samples
-  int m_ssDisplayMode = 1;                 // 0=assign colors to samples at random, 1=assign according to bin in focal node
+  int m_ssDisplayMode = 2;                 // 0=assign colors to samples at random, 
+                                           // 1=assign according to bin in focal node (colours random for adjacent bins),
+                                           // 2=assign according to bin in focal node (colours progress for adjacent bins)
   
   // visualisation options
   boolean m_visTiled = true;               // display histogram bins as tiled or continuous?
@@ -575,7 +577,17 @@ public class Model {
       case ShowSamples: {
         m_interactionMode = InteractionMode.ShowSamples;
         resetAllBrushing();
-        brushAllNodesOnMultiSelection();
+        //brushAllNodesOnMultiSelection();
+        checkAllNodesSafe();
+        // now ensure that at most one Node has the focus
+        for (Node node : m_allNodes) {
+          if (node.m_bHasFocus) {
+            setSingleFocus(node.m_id);
+            brushAllNodesOnOneSelection(node);
+            redraw();
+            break;
+          }
+        }        
         m_ssTimer = 0;
         updateSelectedSampleList();
         redraw();
@@ -875,7 +887,7 @@ public class Model {
     m_ssDisplayIdx = 0;
     
     // And finally create color palette for the samples
-    if (m_ssDisplayMode == 1 && ffNode != null) {
+    if ((m_ssDisplayMode == 1 || m_ssDisplayMode == 2) && ffNode != null) {
       // assign hue for each sample according to which bin it belongs to in the focal node
       ffNode.matchSampleBinsToColors(m_ssSamplesToDisplay, m_ssSampleHues);
     }
@@ -1130,7 +1142,7 @@ public class Model {
   void toggleSSDisplayMode() {
     // for ShowSamples mode, switch between showing samples in random colors, or colored according to which
     // bin the sample appears in in the first focal node
-    m_ssDisplayMode = 1 - m_ssDisplayMode;
+    m_ssDisplayMode = (m_ssDisplayMode + 1) % 3;
     updateSelectedSampleList();
   }
   

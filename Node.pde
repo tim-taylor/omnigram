@@ -600,8 +600,10 @@ public abstract class Node {
             break;
           }
           case ShowSamples: {
-            m_model.toggleMultiFocus(m_id);
-            m_model.brushAllNodesOnMultiSelection();
+            //m_model.toggleMultiFocus(m_id);
+            //m_model.brushAllNodesOnMultiSelection();
+            m_model.setSingleFocus(m_id);
+            m_model.brushAllNodesOnOneSelection(this);              
             m_model.updateSelectedSampleList();
             break;
           }
@@ -817,7 +819,8 @@ public abstract class Node {
           break;
         }
         case ShowSamples: {
-          m_model.brushAllNodesOnMultiSelection();
+          //m_model.brushAllNodesOnMultiSelection();
+          m_model.brushAllNodesOnOneSelection(this);
           m_model.updateSelectedSampleList();
           break;
         }
@@ -1073,7 +1076,10 @@ public abstract class Node {
     for (int i=0; i<m_hgNumBins; i++) {
       binHues.add((i*255)/m_hgNumBins);
     }
-    //CHANGED//Collections.shuffle(binHues);  // shuffle the hues so adjacent bins have very different hues
+    
+    if (m_model.m_ssDisplayMode == 1) {
+      Collections.shuffle(binHues);  // shuffle the hues so adjacent bins have very different hues
+    }
     
     // Finally, for each sample in the list, determine which bin it belongs to and assign
     // a hue accordingly
