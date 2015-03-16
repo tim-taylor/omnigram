@@ -809,7 +809,7 @@ public class Model {
     text("'1' = Single Node Brushing", x1, y);
     text("'2' = Multi Node Brushing", x2a, y);
     y += dy;
-    text("'3' = Colour Bins", x1, y);
+    text("'3' = Omnibrushing (Colour Bins)", x1, y);
     text("'4' = Show Individual Samples", x2a, y);
     y += dy;
     text("[Current mode: "+modeStr+"]", x1, y);
