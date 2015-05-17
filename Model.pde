@@ -761,10 +761,10 @@ public class Model {
         mode = "Multi Node Brushing";
         break;
       case ColourBins:
-        mode = "Colour Bins";
+        mode = "Omnibrushing";
         break;
       case ShowSamples:
-        mode = "Show Individual Samples";
+        mode = "Sample View";
         break;
       default:
         mode = "(no mode set)";
@@ -809,8 +809,8 @@ public class Model {
     text("'1' = Single Node Brushing", x1, y);
     text("'2' = Multi Node Brushing", x2a, y);
     y += dy;
-    text("'3' = Omnibrushing (Colour Bins)", x1, y);
-    text("'4' = Show Individual Samples", x2a, y);
+    text("'3' = Omnibrushing", x1, y);
+    text("'4' = Sample View", x2a, y);
     y += dy;
     text("[Current mode: "+modeStr+"]", x1, y);
     y += bigdy;
